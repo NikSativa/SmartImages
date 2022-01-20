@@ -1,0 +1,79 @@
+{
+  "object": {
+    "pins": [
+      {
+        "package": "CwlCatchException",
+        "repositoryURL": "https://github.com/mattgallagher/CwlCatchException.git",
+        "state": {
+          "branch": null,
+          "revision": "35f9e770f54ce62dd8526470f14c6e137cef3eea",
+          "version": "2.1.1"
+        }
+      },
+      {
+        "package": "CwlPreconditionTesting",
+        "repositoryURL": "https://github.com/mattgallagher/CwlPreconditionTesting.git",
+        "state": {
+          "branch": null,
+          "revision": "c21f7bab5ca8eee0a9998bbd17ca1d0eb45d4688",
+          "version": "2.1.0"
+        }
+      },
+      {
+        "package": "NCallback",
+        "repositoryURL": "https://github.com/NikSativa/NCallback.git",
+        "state": {
+          "branch": null,
+          "revision": "d9571895ddb7b24f7c8bd94598d22f5118a09008",
+          "version": "2.10.3"
+        }
+      },
+      {
+        "package": "Nimble",
+        "repositoryURL": "https://github.com/Quick/Nimble.git",
+        "state": {
+          "branch": null,
+          "revision": "c93f16c25af5770f0d3e6af27c9634640946b068",
+          "version": "9.2.1"
+        }
+      },
+      {
+        "package": "NQueue",
+        "repositoryURL": "https://github.com/NikSativa/NQueue.git",
+        "state": {
+          "branch": null,
+          "revision": "fbd5745759b3a1c4c4b5aa7b7fd250032b1baa31",
+          "version": "1.1.11"
+        }
+      },
+      {
+        "package": "NRequest",
+        "repositoryURL": "https://github.com/NikSativa/NRequest.git",
+        "state": {
+          "branch": null,
+          "revision": "967423848ee74ba1e81e86d5a23b29ba62084565",
+          "version": "3.3.2"
+        }
+      },
+      {
+        "package": "NSpry",
+        "repositoryURL": "https://github.com/NikSativa/NSpry.git",
+        "state": {
+          "branch": null,
+          "revision": "85aff16ab963fc72f6972cd82d36677973792155",
+          "version": "1.2.7"
+        }
+      },
+      {
+        "package": "Quick",
+        "repositoryURL": "https://github.com/Quick/Quick.git",
+        "state": {
+          "branch": null,
+          "revision": "bd86ca0141e3cfb333546de5a11ede63f0c4a0e6",
+          "version": "4.0.0"
+        }
+      }
+    ]
+  },
+  "version": 1
+}
