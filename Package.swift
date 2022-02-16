@@ -29,6 +29,7 @@ let package = Package(
                 dependencies: [
                     "NSpry",
                     "NRequest",
+                    "NImageDownloader",
                     .product(name: "NRequestTestHelpers", package: "NRequest")
                 ],
                 path: "TestHelpers"),
