@@ -32,9 +32,9 @@ extension Impl {
                                     diskCapacity: 400 * 1024 * 1024,
                                     directory: directory)
             } else {
-                urlCache = URLCache(memoryCapacity: 40 * 1024 * 1024,
-                                    diskCapacity: 400 * 1024 * 1024,
-                                    diskPath: folderName)
+                self.urlCache = URLCache(memoryCapacity: 40 * 1024 * 1024,
+                                         diskCapacity: 400 * 1024 * 1024,
+                                         diskPath: folderName)
             }
         }
     }

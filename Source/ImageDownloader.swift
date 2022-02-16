@@ -184,6 +184,7 @@ extension Impl {
                 return .preset(configuration.priority)
             }
 
+            // swiftformat:disable:next redundantSelf
             operationQueue.add(requestGenerator: self.request(with: configuration),
                                completionCallback: actual,
                                url: configuration.url,
