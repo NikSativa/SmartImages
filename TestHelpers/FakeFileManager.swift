@@ -18,8 +18,6 @@ final class FakeFileManager: NImageDownloader.FileManager, Spryable {
     }
 }
 
-extension NImageDownloader.FileManager.SearchPathDirectory: SpryEquatable {
-}
+extension NImageDownloader.FileManager.SearchPathDirectory: SpryEquatable {}
 
-extension NImageDownloader.FileManager.SearchPathDomainMask: SpryEquatable {
-}
+extension NImageDownloader.FileManager.SearchPathDomainMask: SpryEquatable {}

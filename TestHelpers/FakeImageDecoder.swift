@@ -13,8 +13,7 @@ final class FakeImageDecoder: ImageDecoder, Spryable {
         case decode = "decode(_:)"
     }
 
-    init() {
-    }
+    init() {}
 
     func decode(_ data: Data) -> UIImage? {
         return spryify(arguments: data)

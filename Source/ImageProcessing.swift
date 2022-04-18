@@ -9,8 +9,7 @@ protocol ImageProcessing {
 
 extension Impl {
     struct ImageProcessing {
-        init() {
-        }
+        init() {}
     }
 }
 

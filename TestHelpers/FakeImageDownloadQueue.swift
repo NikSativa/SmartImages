@@ -15,8 +15,7 @@ final class FakeImageDownloadQueue: ImageDownloadQueue, Spryable {
         case cancel = "cancel(for:)"
     }
 
-    init() {
-    }
+    init() {}
 
     func add(requestGenerator: @autoclosure @escaping () -> Callback<UIImage?>,
              completionCallback: Callback<UIImage?>,

@@ -2,8 +2,7 @@ import Foundation
 import NRequest
 
 public final class ModuleFactory {
-    public init() {
-    }
+    public init() {}
 
     public func resolve<E: AnyError>(errorType: E.Type,
                                      requestFactory: AnyRequestManager<E>,

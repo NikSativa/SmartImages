@@ -14,8 +14,7 @@ final class FakeImageProcessing: ImageProcessing, Spryable {
         case process = "process(_:processors:)"
     }
 
-    init() {
-    }
+    init() {}
 
     func process(_ image: UIImage, processors: [ImageProcessor]) -> Callback<UIImage> {
         return spryify(arguments: image, processors)

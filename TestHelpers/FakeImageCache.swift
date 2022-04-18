@@ -16,8 +16,7 @@ final class FakeImageCache: ImageCache, Spryable {
         case removeAll = "removeAll()"
     }
 
-    init() {
-    }
+    init() {}
 
     func cached(for key: Key) -> Data? {
         return spryify(arguments: key)

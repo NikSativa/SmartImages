@@ -14,8 +14,7 @@ final class FakeImageDownloadOperationFactory: ImageDownloadOperationFactory, Sp
         case make = "make(requestGenerator:completionCallback:url:)"
     }
 
-    init() {
-    }
+    init() {}
 
     func make(requestGenerator: @escaping () -> Callback<UIImage?>,
               completionCallback: Callback<UIImage?>,
