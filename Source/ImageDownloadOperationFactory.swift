@@ -11,8 +11,7 @@ protocol ImageDownloadOperationFactory {
 
 extension Impl {
     final class ImageDownloadOperationFactory {
-        init() {
-        }
+        init() {}
     }
 }
 

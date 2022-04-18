@@ -13,8 +13,7 @@ final class FakeImageProcessor: ImageProcessor, Spryable {
         case process = "process(_:)"
     }
 
-    init() {
-    }
+    init() {}
 
     func process(_ image: UIImage) -> UIImage {
         return spryify(arguments: image)

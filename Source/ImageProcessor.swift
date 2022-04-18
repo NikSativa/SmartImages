@@ -15,8 +15,7 @@ public extension ImageProcessor {
 }
 
 // can be used as namespace for any ImageProcessor declared in any other place of app
-public enum ImageProcessors {
-}
+public enum ImageProcessors {}
 
 public extension ImageProcessors {
     struct Composition {

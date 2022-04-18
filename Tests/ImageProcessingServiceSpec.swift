@@ -15,8 +15,10 @@ final class ImageProcessingSpec: QuickSpec {
             var processors: [FakeImageProcessor]!
 
             beforeEach {
-                processors = [.init(),
-                              .init()]
+                processors = [
+                    .init(),
+                    .init(),
+                ]
                 subject = Impl.ImageProcessing()
             }
 

@@ -21,8 +21,7 @@ final class FakeImageDownloading: ImageDownloader, Spryable {
         case cancelPrefetching = "cancelPrefetching(of:)"
     }
 
-    init() {
-    }
+    init() {}
 
     func startDownloading(of info: ImageInfo) -> Callback<UIImage?> {
         return spryify(arguments: info)
