@@ -17,7 +17,7 @@ final class ImageProcessingSpec: QuickSpec {
             beforeEach {
                 processors = [
                     .init(),
-                    .init(),
+                    .init()
                 ]
                 subject = Impl.ImageProcessing()
             }
