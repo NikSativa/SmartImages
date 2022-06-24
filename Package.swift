@@ -50,6 +50,5 @@ let package = Package(
                     resources: [
                         .process("TestImages")
                     ])
-    ],
-    swiftLanguageVersions: [.v5]
+    ]
 )
