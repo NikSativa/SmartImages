@@ -1,6 +1,6 @@
 Pod::Spec.new do |spec|
   spec.name         = "NImageDownloaderTestHelpers"
-  spec.version      = "1.0.0"
+  spec.version      = "1.0.2"
   spec.summary      = "Async image downloader based on NRequest framework"
 
   spec.source       = { :git => "git@github.com:NikSativa/NImageDownloader.git" }
