@@ -5,9 +5,9 @@ import Quick
 
 @testable import NImageDownloader
 
-final class URLRequest_CachePolicy_DNetworkSpec: QuickSpec {
+final class UIImage_NetworkSpec: QuickSpec {
     override func spec() {
-        describe("URLRequest.CachePolicy+DNetworkSpec") {
+        describe("UIImage+NetworkSpec") {
             it("should be a real test") {
                 expect(true).to(beTrue())
             }

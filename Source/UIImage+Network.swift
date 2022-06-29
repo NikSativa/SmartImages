@@ -4,7 +4,7 @@ import UIKit
 // only for internal usage
 extension UIImage {
     private enum AssociatedKeys {
-        static var sourceURL = "DNetwork.ImageDownloader.imageURL"
+        static var sourceURL = "Network.ImageDownloader.imageURL"
     }
 
     @objc internal var sourceURL: URL? {
