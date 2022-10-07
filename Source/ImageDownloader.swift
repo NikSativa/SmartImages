@@ -2,13 +2,20 @@ import Foundation
 import NCallback
 import NQueue
 import NRequest
+
+#if os(iOS) || os(tvOS) || os(watchOS)
 import UIKit
+#elseif os(macOS)
+import Cocoa
+#else
+#error("unsupported os")
+#endif
 
 public protocol ImageDownloader {
     // MARK: - Downloading
 
-    func startDownloading(of info: ImageInfo) -> Callback<UIImage?>
-    func startDownloading(of url: URL) -> Callback<UIImage?>
+    func startDownloading(of info: ImageInfo) -> Callback<Image?>
+    func startDownloading(of url: URL) -> Callback<Image?>
 
     func cancelDownloading(of info: [ImageInfo])
     func cancelDownloading(of info: ImageInfo)
@@ -27,14 +34,14 @@ public protocol ImageDownloader {
     func cancelPrefetching(of urls: [URL])
     func cancelPrefetching(of url: URL)
 
-    // MARK: - UIImageView
+    // MARK: - ImageView
 
     func startDownloading(of info: ImageInfo,
-                          for imageView: UIImageView) -> Callback<UIImage?>
+                          for imageView: ImageView) -> Callback<Image?>
     func startDownloading(of url: URL,
-                          for imageView: UIImageView) -> Callback<UIImage?>
+                          for imageView: ImageView) -> Callback<Image?>
 
-    func cancelDownloading(for imageView: UIImageView)
+    func cancelDownloading(for imageView: ImageView)
 }
 
 extension Impl {
@@ -49,9 +56,9 @@ extension Impl {
 
         private class Weakness {
             @Atomic(mutex: Mutex.pthread(.recursive), read: .sync, write: .sync)
-            private var cached: [() -> UIImageView?] = []
+            private var cached: [() -> ImageView?] = []
 
-            var views: [UIImageView] {
+            var views: [ImageView] {
                 return cached.compactMap {
                     return $0()
                 }
@@ -61,13 +68,13 @@ extension Impl {
                 return views.isEmpty
             }
 
-            func add(_ imageView: UIImageView) {
+            func add(_ imageView: ImageView) {
                 cached.append { [weak imageView] in
                     return imageView
                 }
             }
 
-            func remove(_ imageView: UIImageView) {
+            func remove(_ imageView: ImageView) {
                 cached = cached.filter {
                     if let cached = $0() {
                         return cached !== imageView
@@ -78,7 +85,7 @@ extension Impl {
         }
 
         @Atomic(mutex: Mutex.pthread(.recursive), read: .sync, write: .sync)
-        private var pending: [URL: PendingCallback<UIImage?>] = [:]
+        private var pending: [URL: PendingCallback<Image?>] = [:]
         @Atomic(mutex: Mutex.pthread(.recursive), read: .sync, write: .sync)
         private var imageViewCache: [URL: Weakness] = [:]
 
@@ -100,14 +107,14 @@ extension Impl {
             self.operationQueue = operationQueue
         }
 
-        private func request(with info: ImageInfo) -> Callback<UIImage?> {
+        private func request(with info: ImageInfo) -> Callback<Image?> {
             let parameters = Parameters(address: .url(info.url),
                                         requestPolicy: info.cachePolicy,
                                         timeoutInterval: info.timeoutInterval,
                                         queue: .async(decodingQueue))
             let request = requestFactory.requestData(with: parameters)
                 .recoverNil()
-                .andThen { [imageDecoding] (data: Data?) -> Callback<UIImage?> in
+                .andThen { [imageDecoding] (data: Data?) -> Callback<Image?> in
                     if let data = data {
                         return imageDecoding.decode(data)
                     }
@@ -130,7 +137,7 @@ extension Impl {
             return request
         }
 
-        private func add(_ imageView: UIImageView,
+        private func add(_ imageView: ImageView,
                          for url: URL) {
             $imageViewCache.mutate { imageViewCache in
                 imageViewCache = imageViewCache.filter { _, view in
@@ -148,9 +155,9 @@ extension Impl {
             }
         }
 
-        private func schedule(_ info: ImageInfo) -> Callback<UIImage?> {
-            let pending: PendingCallback<UIImage?> = $pending.mutate { pending in
-                let result: PendingCallback<UIImage?>
+        private func schedule(_ info: ImageInfo) -> Callback<Image?> {
+            let pending: PendingCallback<Image?> = $pending.mutate { pending in
+                let result: PendingCallback<Image?>
 
                 if let cached = pending[info.url] {
                     result = cached
@@ -173,7 +180,7 @@ extension Impl {
         }
 
         private func addOperation(configuration: ImageInfo,
-                                  actual: Callback<UIImage?>) {
+                                  actual: Callback<Image?>) {
             let prioritizer: (URL) -> ImageDownloadQueuePriority = { [weak self] url in
                 if let imageViewCache = self?.imageViewCache,
                    let cached = imageViewCache[url],
@@ -198,7 +205,7 @@ extension Impl {
             operationQueue.cancel(for: url)
         }
 
-        private func cachedImage(for info: ImageInfo) -> Callback<UIImage?>? {
+        private func cachedImage(for info: ImageInfo) -> Callback<Image?>? {
             if let data = imageCache[info.url] {
                 return imageDecoding.decode(data)
                     .andThen { [imageProcessing] image in
@@ -219,11 +226,11 @@ extension Impl {
             return nil
         }
 
-        private func setToImageViews(_ image: UIImage?,
+        private func setToImageViews(_ image: Image?,
                                      info: ImageInfo,
                                      cleanup: Bool,
                                      animated: Bool) {
-            let selected: [UIImageView]? = $imageViewCache.mutate { imageViewCache in
+            let selected: [ImageView]? = $imageViewCache.mutate { imageViewCache in
                 let selected = imageViewCache[info.url]?.views
 
                 if cleanup {
@@ -250,9 +257,9 @@ extension Impl {
             }
         }
 
-        private func setPlaceholder(to imageView: UIImageView,
+        private func setPlaceholder(to imageView: ImageView,
                                     info: ImageInfo,
-                                    scheduled: Callback<UIImage?>) -> Callback<UIImage?> {
+                                    scheduled: Callback<Image?>) -> Callback<Image?> {
             switch info.placeholder {
             case .ignore:
                 return scheduled
@@ -282,7 +289,7 @@ extension Impl {
 }
 
 extension Impl.ImageDownloader: ImageDownloader {
-    func startDownloading(of configuration: ImageInfo) -> Callback<UIImage?> {
+    func startDownloading(of configuration: ImageInfo) -> Callback<Image?> {
         assert(Thread.isMainThread)
 
         if let cachedImage = cachedImage(for: configuration) {
@@ -291,11 +298,11 @@ extension Impl.ImageDownloader: ImageDownloader {
         return schedule(configuration)
     }
 
-    func startDownloading(of url: URL) -> Callback<UIImage?> {
+    func startDownloading(of url: URL) -> Callback<Image?> {
         return startDownloading(of: .init(url: url))
     }
 
-    func startDownloading(of info: ImageInfo, for imageView: UIImageView) -> Callback<UIImage?> {
+    func startDownloading(of info: ImageInfo, for imageView: ImageView) -> Callback<Image?> {
         assert(Thread.isMainThread)
         cancelDownloading(for: imageView)
 
@@ -308,7 +315,7 @@ extension Impl.ImageDownloader: ImageDownloader {
 
         add(imageView, for: info.url)
 
-        var scheduled: Callback<UIImage?> = .init { actual in
+        var scheduled: Callback<Image?> = .init { actual in
             let scheduled = self.schedule(info)
             scheduled.onComplete { [actual] image in
                 self.setToImageViews(image,
@@ -321,7 +328,7 @@ extension Impl.ImageDownloader: ImageDownloader {
 
         if let cachedImage = cachedImage(for: info) {
             let loader = scheduled
-            scheduled = cachedImage.andThen { image -> Callback<UIImage?> in
+            scheduled = cachedImage.andThen { image -> Callback<Image?> in
                 if let image = image {
                     return .init(result: image)
                 } else {
@@ -342,7 +349,7 @@ extension Impl.ImageDownloader: ImageDownloader {
                               scheduled: scheduled)
     }
 
-    func startDownloading(of url: URL, for imageView: UIImageView) -> Callback<UIImage?> {
+    func startDownloading(of url: URL, for imageView: ImageView) -> Callback<Image?> {
         return startDownloading(of: .init(url: url), for: imageView)
     }
 
@@ -371,7 +378,7 @@ extension Impl.ImageDownloader: ImageDownloader {
         cancelDownloading(of: [url])
     }
 
-    func cancelDownloading(for imageView: UIImageView) {
+    func cancelDownloading(for imageView: ImageView) {
         assert(Thread.isMainThread)
 
         $imageViewCache.mutate { imageViewCache in
@@ -428,11 +435,12 @@ extension Impl.ImageDownloader: ImageDownloader {
 }
 
 private extension Optional where Wrapped == ImageInfo.Animation {
-    func animate(_ imageView: UIImageView, image: UIImage?) {
+    func animate(_ imageView: ImageView, image: Image?) {
         assert(Thread.isMainThread)
         switch self {
         case .none:
             imageView.image = image
+        #if os(iOS) || os(tvOS) || os(watchOS)
         case .crossDissolve:
             if image?.size == imageView.image?.size,
                let currentSourceURL = imageView.image?.sourceURL,
@@ -446,6 +454,12 @@ private extension Optional where Wrapped == ImageInfo.Animation {
                               animations: {
                                   imageView.image = image
                               })
+        #elseif os(macOS)
+        case .noAnimation:
+            imageView.image = image
+        #else
+            #error("unsupported os")
+        #endif
         }
     }
 }

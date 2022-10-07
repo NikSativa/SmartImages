@@ -4,7 +4,7 @@ import PackageDescription
 // swiftformat:disable all
 let package = Package(
     name: "NImageDownloader",
-    platforms: [.iOS(.v12)],
+    platforms: [.iOS(.v12), .macOS(.v10_13)],
     products: [
         .library(name: "NImageDownloader", targets: ["NImageDownloader"]),
         .library(name: "NImageDownloaderTestHelpers", targets: ["NImageDownloaderTestHelpers"])

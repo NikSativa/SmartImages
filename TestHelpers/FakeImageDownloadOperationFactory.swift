@@ -1,7 +1,6 @@
 import Foundation
 import NCallback
 import NSpry
-import UIKit
 
 @testable import NImageDownloader
 
@@ -16,8 +15,8 @@ final class FakeImageDownloadOperationFactory: ImageDownloadOperationFactory, Sp
 
     init() {}
 
-    func make(requestGenerator: @escaping () -> Callback<UIImage?>,
-              completionCallback: Callback<UIImage?>,
+    func make(requestGenerator: @escaping () -> Callback<Image?>,
+              completionCallback: Callback<Image?>,
               url: URL) -> ImageDownloadOperation {
         return spryify(arguments: requestGenerator, completionCallback, url)
     }

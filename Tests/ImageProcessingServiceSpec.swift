@@ -3,7 +3,6 @@ import Nimble
 import NSpry
 import NSpry_Nimble
 import Quick
-import UIKit
 
 @testable import NImageDownloader
 @testable import NImageDownloaderTestHelpers
@@ -23,13 +22,13 @@ final class ImageProcessingSpec: QuickSpec {
             }
 
             describe("processing image") {
-                var actualImage: UIImage?
+                var actualImage: Image?
 
                 beforeEach {
-                    processors[0].stub(.process).andReturn(UIImage.testMake(.two))
-                    processors[1].stub(.process).andReturn(UIImage.testMake(.three))
+                    processors[0].stub(.process).andReturn(Image.testMake(.two))
+                    processors[1].stub(.process).andReturn(Image.testMake(.three))
 
-                    subject.process(UIImage.testMake(.one),
+                    subject.process(Image.testMake(.one),
                                     processors: processors)
                         .onComplete {
                             actualImage = $0
@@ -37,12 +36,12 @@ final class ImageProcessingSpec: QuickSpec {
                 }
 
                 it("should proccess image") {
-                    expect(processors[0]).to(haveReceived(.process, with: UIImage.testMake(.one)))
-                    expect(processors[1]).to(haveReceived(.process, with: UIImage.testMake(.two)))
+                    expect(processors[0]).to(haveReceived(.process, with: Image.testMake(.one)))
+                    expect(processors[1]).to(haveReceived(.process, with: Image.testMake(.two)))
                 }
 
                 it("should generate corresponding image") {
-                    expect(actualImage) == UIImage.testMake(.three)
+                    expect(actualImage) == Image.testMake(.three)
                 }
             }
         }

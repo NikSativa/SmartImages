@@ -1,18 +1,23 @@
 import Foundation
 import NCallback
-import UIKit
 
 public struct ImageInfo {
     public enum Animation: Equatable {
+        #if os(iOS) || os(tvOS) || os(watchOS)
         case crossDissolve
+        #elseif os(macOS)
+        case noAnimation
+        #else
+        #error("unsupported os")
+        #endif
     }
 
     public enum Placeholder: Equatable {
         case clear
         case ignore
-        case image(UIImage)
+        case image(Image)
 
-        public init(_ image: UIImage?) {
+        public init(_ image: Image?) {
             self = image.map { .image($0) } ?? .clear
         }
 

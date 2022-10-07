@@ -3,7 +3,6 @@ import Nimble
 import NSpry
 import NSpry_Nimble
 import Quick
-import UIKit
 
 @testable import NImageDownloader
 @testable import NImageDownloaderTestHelpers
@@ -46,9 +45,9 @@ final class ImageDecoders_DefaultSpec: QuickSpec {
             it("should create image from png file") {
                 let url = bundle.url(forResource: "rgb_1", withExtension: "png").unsafelyUnwrapped
                 let data = (try? Data(contentsOf: url)).unsafelyUnwrapped
-                let expectedImage = UIImage(named: "rgb_1.png", in: bundle, compatibleWith: nil)
+                let expectedImage = PlatformImage(data: data)
                 expect(expectedImage).toNot(beNil())
-                expect(subject.decode(data)?.pngData()) == expectedImage?.pngData()
+                expect(subject.decode(data).map(PlatformImage.init)?.pngData()) == expectedImage?.pngData()
             }
         }
     }

@@ -24,10 +24,11 @@ extension Impl {
 
         init(fileManager: NImageDownloader.FileManager) {
             let folderName = "Images"
-            if #available(iOS 13, *) {
+            if #available(iOS 13, macOS 10.15, *) {
                 let urls = fileManager.urls(for: .cachesDirectory,
                                             in: .userDomainMask)
                 let directory = urls.first?.appendingPathComponent(folderName, isDirectory: true)
+
                 urlCache = URLCache(memoryCapacity: 40 * 1024 * 1024,
                                     diskCapacity: 400 * 1024 * 1024,
                                     directory: directory)

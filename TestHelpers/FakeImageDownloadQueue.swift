@@ -1,7 +1,6 @@
 import Foundation
 import NCallback
 import NSpry
-import UIKit
 
 @testable import NImageDownloader
 
@@ -17,8 +16,8 @@ final class FakeImageDownloadQueue: ImageDownloadQueue, Spryable {
 
     init() {}
 
-    func add(requestGenerator: @autoclosure @escaping () -> Callback<UIImage?>,
-             completionCallback: Callback<UIImage?>,
+    func add(requestGenerator: @autoclosure @escaping () -> Callback<Image?>,
+             completionCallback: Callback<Image?>,
              url: URL,
              prioritizer: @escaping (URL) -> Priority) {
         return spryify(arguments: requestGenerator, completionCallback, url, prioritizer)

@@ -3,7 +3,6 @@ import Nimble
 import NSpry
 import NSpry_Nimble
 import Quick
-import UIKit
 
 @testable import NCallback
 @testable import NCallbackTestHelpers
@@ -13,7 +12,7 @@ import UIKit
 final class ImageDownloadOperationSpec: QuickSpec {
     private enum Result: Equatable {
         case absent
-        case received(UIImage?)
+        case received(Image?)
     }
 
     override func spec() {
@@ -21,8 +20,8 @@ final class ImageDownloadOperationSpec: QuickSpec {
             var subject: ImageDownloadOperation!
             var requestGenerator: Impl.ImageDownloadOperation.Generator!
             var requestGeneratorCounter: Int = 0
-            var request: FakeCallback<UIImage?>!
-            var completionCallback: FakeCallback<UIImage?>!
+            var request: FakeCallback<Image?>!
+            var completionCallback: FakeCallback<Image?>!
             var url: URL!
             var timestamp: TimeInterval!
             let lifecycleId: UInt64 = 1111
@@ -89,7 +88,7 @@ final class ImageDownloadOperationSpec: QuickSpec {
             }
 
             describe("start") {
-                var operationCallback: Callback<UIImage?>!
+                var operationCallback: Callback<Image?>!
 
                 beforeEach {
                     operationCallback = subject.start()
@@ -161,7 +160,7 @@ final class ImageDownloadOperationSpec: QuickSpec {
                     }
 
                     context("when received beforeComplete") {
-                        let image: UIImage = .init()
+                        let image: Image = .init()
 
                         beforeEach {
                             request.beforeComplete?(image)
@@ -173,7 +172,7 @@ final class ImageDownloadOperationSpec: QuickSpec {
                     }
 
                     context("when received onComplete") {
-                        let image: UIImage = .init()
+                        let image: Image = .init()
 
                         beforeEach {
                             request.beforeComplete?(image)

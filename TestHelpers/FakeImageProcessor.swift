@@ -1,6 +1,5 @@
 import Foundation
 import NSpry
-import UIKit
 
 @testable import NImageDownloader
 
@@ -15,7 +14,7 @@ final class FakeImageProcessor: ImageProcessor, Spryable {
 
     init() {}
 
-    func process(_ image: UIImage) -> UIImage {
+    func process(_ image: Image) -> Image {
         return spryify(arguments: image)
     }
 }

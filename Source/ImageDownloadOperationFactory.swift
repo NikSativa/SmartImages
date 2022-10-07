@@ -1,11 +1,10 @@
 import Foundation
 import NCallback
 import NRequest
-import UIKit
 
 protocol ImageDownloadOperationFactory {
-    func make(requestGenerator: @escaping () -> Callback<UIImage?>,
-              completionCallback: Callback<UIImage?>,
+    func make(requestGenerator: @escaping () -> Callback<Image?>,
+              completionCallback: Callback<Image?>,
               url: URL) -> ImageDownloadOperation
 }
 
@@ -16,8 +15,8 @@ extension Impl {
 }
 
 extension Impl.ImageDownloadOperationFactory: ImageDownloadOperationFactory {
-    func make(requestGenerator: @escaping () -> Callback<UIImage?>,
-              completionCallback: Callback<UIImage?>,
+    func make(requestGenerator: @escaping () -> Callback<Image?>,
+              completionCallback: Callback<Image?>,
               url: URL) -> ImageDownloadOperation {
         return Impl.ImageDownloadOperation(requestGenerator: requestGenerator,
                                            completionCallback: completionCallback,
