@@ -1,6 +1,5 @@
 import Foundation
 import NCallback
-import UIKit
 
 protocol ImageDownloadOperation {
     typealias State = ImageDownloadOperationState
@@ -9,7 +8,7 @@ protocol ImageDownloadOperation {
     var state: State { get }
     var timestamp: TimeInterval { get }
 
-    func start() -> Callback<UIImage?>
+    func start() -> Callback<Image?>
     func cancel()
 }
 
@@ -22,12 +21,12 @@ internal enum ImageDownloadOperationState {
 
 extension Impl {
     final class ImageDownloadOperation {
-        typealias Generator = () -> Callback<UIImage?>
+        typealias Generator = () -> Callback<Image?>
         typealias State = ImageDownloadOperationState
 
-        private var request: Callback<UIImage?>?
+        private var request: Callback<Image?>?
         private let requestGenerator: Generator
-        private let completionCallback: Callback<UIImage?>
+        private let completionCallback: Callback<Image?>
         private let lifecycleId: UInt64
 
         private(set) var state: State = .idle
@@ -35,7 +34,7 @@ extension Impl {
         let timestamp: TimeInterval
 
         init(requestGenerator: @escaping Generator,
-             completionCallback: Callback<UIImage?>,
+             completionCallback: Callback<Image?>,
              url: URL,
              date: Date = Date(),
              lifecycleId: UInt64 = .random(in: .min...UInt64.max)) {
@@ -50,7 +49,7 @@ extension Impl {
 }
 
 extension Impl.ImageDownloadOperation: ImageDownloadOperation {
-    func start() -> Callback<UIImage?> {
+    func start() -> Callback<Image?> {
         assert(state == .idle, "should not be called twice")
 
         return .init { [weak self, requestGenerator, completionCallback] actual in

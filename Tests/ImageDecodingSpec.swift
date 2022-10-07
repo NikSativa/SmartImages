@@ -3,7 +3,6 @@ import Nimble
 import NSpry
 import NSpry_Nimble
 import Quick
-import UIKit
 
 @testable import NImageDownloader
 @testable import NImageDownloaderTestHelpers
@@ -16,7 +15,7 @@ final class ImageDecodingSpec: QuickSpec {
             var pngData: Data!
 
             beforeEach {
-                pngData = UIImage.testMake(.four).pngData()
+                pngData = PlatformImage(Image.testMake(.four)).pngData()
 
                 decoders = [.init(), .init()]
                 subject = Impl.ImageDecoding(decoders: decoders)
@@ -27,11 +26,11 @@ final class ImageDecodingSpec: QuickSpec {
             }
 
             context("when first decoder can't recognize data") {
-                var actualImage: UIImage?
+                var actualImage: Image?
 
                 beforeEach {
                     decoders[0].stub(.decode).andReturn(nil)
-                    decoders[1].stub(.decode).andReturn(UIImage.testMake(.one))
+                    decoders[1].stub(.decode).andReturn(Image.testMake(.one))
 
                     subject.decode(pngData)
                         .onComplete {
@@ -45,15 +44,15 @@ final class ImageDecodingSpec: QuickSpec {
                 }
 
                 it("should generate corresponding image") {
-                    expect(actualImage) == UIImage.testMake(.one)
+                    expect(actualImage) == Image.testMake(.one)
                 }
             }
 
             context("when first decoder recognize data") {
-                var actualImage: UIImage?
+                var actualImage: Image?
 
                 beforeEach {
-                    decoders[0].stub(.decode).andReturn(UIImage.testMake(.one))
+                    decoders[0].stub(.decode).andReturn(Image.testMake(.one))
                     decoders[1].stub(.decode).andReturn(nil)
 
                     subject.decode(pngData)
@@ -68,7 +67,7 @@ final class ImageDecodingSpec: QuickSpec {
                 }
 
                 it("should generate corresponding image") {
-                    expect(actualImage) == UIImage.testMake(.one)
+                    expect(actualImage) == Image.testMake(.one)
                 }
             }
         }

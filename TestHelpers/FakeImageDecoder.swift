@@ -1,6 +1,5 @@
 import Foundation
 import NSpry
-import UIKit
 
 @testable import NImageDownloader
 
@@ -15,7 +14,7 @@ final class FakeImageDecoder: ImageDecoder, Spryable {
 
     init() {}
 
-    func decode(_ data: Data) -> UIImage? {
+    func decode(_ data: Data) -> Image? {
         return spryify(arguments: data)
     }
 }

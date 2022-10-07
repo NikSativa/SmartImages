@@ -1,14 +1,13 @@
 import Foundation
 import NCallback
 import NQueue
-import UIKit
 
 protocol ImageDownloadQueue {
     typealias Priority = ImageDownloadQueuePriority
     typealias Operation = ImageDownloadOperation
 
-    func add(requestGenerator: @autoclosure @escaping () -> Callback<UIImage?>,
-             completionCallback: Callback<UIImage?>,
+    func add(requestGenerator: @autoclosure @escaping () -> Callback<Image?>,
+             completionCallback: Callback<Image?>,
              url: URL,
              prioritizer: @escaping (URL) -> Priority)
     func cancel(for url: URL)
@@ -136,8 +135,8 @@ extension Impl {
 }
 
 extension Impl.ImageDownloadQueue: ImageDownloadQueue {
-    func add(requestGenerator: @autoclosure @escaping () -> Callback<UIImage?>,
-             completionCallback: Callback<UIImage?>,
+    func add(requestGenerator: @autoclosure @escaping () -> Callback<Image?>,
+             completionCallback: Callback<Image?>,
              url: URL,
              prioritizer: @escaping (URL) -> Priority) {
         let originalOperation = operationFactory.make(requestGenerator: requestGenerator,

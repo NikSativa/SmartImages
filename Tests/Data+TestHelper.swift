@@ -1,7 +1,9 @@
-import UIKit
+import Foundation
+
+@testable import NImageDownloader
 
 extension Data {
-    static func testMake(image: UIImage.TastableImage = .default) -> Self {
-        return UIImage.testMake(image).pngData().unsafelyUnwrapped
+    static func testMake(image: Image.TastableImage = .default) -> Self {
+        return PlatformImage(Image.testMake(image)).pngData().unsafelyUnwrapped
     }
 }

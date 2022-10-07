@@ -1,10 +1,9 @@
 import Foundation
 import NCallback
-import UIKit
 
 protocol ImageProcessing {
-    func process(_ image: UIImage,
-                 processors: [ImageProcessor]) -> Callback<UIImage>
+    func process(_ image: Image,
+                 processors: [ImageProcessor]) -> Callback<Image>
 }
 
 extension Impl {
@@ -14,8 +13,8 @@ extension Impl {
 }
 
 extension Impl.ImageProcessing: ImageProcessing {
-    func process(_ image: UIImage,
-                 processors: [ImageProcessor]) -> Callback<UIImage> {
+    func process(_ image: Image,
+                 processors: [ImageProcessor]) -> Callback<Image> {
         return .init { actual in
             let composition = ImageProcessors.Composition(processors: processors)
             let processedImage = composition.process(image)

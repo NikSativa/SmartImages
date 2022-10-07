@@ -1,7 +1,6 @@
 import Foundation
 import NCallback
 import NSpry
-import UIKit
 
 @testable import NImageDownloader
 @testable import NRequestTestHelpers
@@ -35,7 +34,9 @@ extension ImageInfo: Equatable, SpryEquatable {
 
 extension Array where Element == ImageProcessor {
     static func ==(lhs: Self, rhs: Self) -> Bool {
-        return lhs.count == rhs.count &&
-            zip(lhs, rhs).lazy.map { String(reflecting: $0) == String(reflecting: $1) }.contains(false)
+        return lhs.count == rhs.count
+            && zip(lhs, rhs).lazy.map {
+                return String(reflecting: $0) == String(reflecting: $1)
+            }.contains(false)
     }
 }

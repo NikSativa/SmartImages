@@ -1,9 +1,8 @@
 import Foundation
 import NCallback
-import UIKit
 
 protocol ImageDecoding {
-    func decode(_ data: Data) -> Callback<UIImage?>
+    func decode(_ data: Data) -> Callback<Image?>
 }
 
 extension Impl {
@@ -21,7 +20,7 @@ extension Impl {
 }
 
 extension Impl.ImageDecoding: ImageDecoding {
-    func decode(_ data: Data) -> Callback<UIImage?> {
+    func decode(_ data: Data) -> Callback<Image?> {
         return .init { [decoders] actual in
             for decoder in decoders {
                 if let image = decoder.decode(data) {

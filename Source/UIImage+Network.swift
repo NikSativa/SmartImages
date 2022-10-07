@@ -1,8 +1,7 @@
 import Foundation
-import UIKit
 
 // only for internal usage
-extension UIImage {
+extension Image {
     private enum AssociatedKeys {
         static var sourceURL = "Network.ImageDownloader.imageURL"
     }

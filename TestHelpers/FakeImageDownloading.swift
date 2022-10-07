@@ -1,7 +1,6 @@
 import Foundation
 import NCallback
 import NSpry
-import UIKit
 
 @testable import NImageDownloader
 
@@ -23,19 +22,19 @@ final class FakeImageDownloading: ImageDownloader, Spryable {
 
     init() {}
 
-    func startDownloading(of info: ImageInfo) -> Callback<UIImage?> {
+    func startDownloading(of info: ImageInfo) -> Callback<Image?> {
         return spryify(arguments: info)
     }
 
-    func startDownloading(of info: ImageInfo, for imageView: UIImageView) -> Callback<UIImage?> {
+    func startDownloading(of info: ImageInfo, for imageView: ImageView) -> Callback<Image?> {
         return spryify(arguments: info, imageView)
     }
 
-    func startDownloading(of url: URL) -> Callback<UIImage?> {
+    func startDownloading(of url: URL) -> Callback<Image?> {
         return spryify(arguments: url)
     }
 
-    func startDownloading(of url: URL, for imageView: UIImageView) -> Callback<UIImage?> {
+    func startDownloading(of url: URL, for imageView: ImageView) -> Callback<Image?> {
         return spryify(arguments: url, imageView)
     }
 
@@ -55,7 +54,7 @@ final class FakeImageDownloading: ImageDownloader, Spryable {
         return spryify(arguments: url)
     }
 
-    func cancelDownloading(for imageView: UIImageView) {
+    func cancelDownloading(for imageView: ImageView) {
         return spryify(arguments: imageView)
     }
 

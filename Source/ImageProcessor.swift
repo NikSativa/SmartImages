@@ -1,11 +1,10 @@
 import Foundation
 import NCallback
 import NQueue
-import UIKit
 
 public protocol ImageProcessor {
     var name: String { get }
-    func process(_ image: UIImage) -> UIImage
+    func process(_ image: Image) -> Image
 }
 
 public extension ImageProcessor {
@@ -28,7 +27,7 @@ public extension ImageProcessors {
 }
 
 extension ImageProcessors.Composition: ImageProcessor {
-    public func process(_ image: UIImage) -> UIImage {
+    public func process(_ image: Image) -> Image {
         if !processors.isEmpty {
             return processors.reduce(image) {
                 return $1.process($0)
