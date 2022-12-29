@@ -5,6 +5,8 @@ protocol ImageDecoding {
     func decode(_ data: Data) -> Callback<Image?>
 }
 
+// MARK: - Impl.ImageDecoding
+
 extension Impl {
     struct ImageDecoding {
         private let decoders: [ImageDecoder]
@@ -18,6 +20,8 @@ extension Impl {
         }
     }
 }
+
+// MARK: - Impl.ImageDecoding + ImageDecoding
 
 extension Impl.ImageDecoding: ImageDecoding {
     func decode(_ data: Data) -> Callback<Image?> {

@@ -17,6 +17,8 @@ extension ImageCache {
     }
 }
 
+// MARK: - Impl.ImageCache
+
 extension Impl {
     final class ImageCache {
         private let mutex: Mutexing = Mutex.pthread(.recursive)
@@ -40,6 +42,8 @@ extension Impl {
         }
     }
 }
+
+// MARK: - Impl.ImageCache + ImageCache
 
 extension Impl.ImageCache: ImageCache {
     func cached(for key: Key) -> Data? {

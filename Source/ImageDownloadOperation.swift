@@ -19,6 +19,8 @@ internal enum ImageDownloadOperationState {
     case finished
 }
 
+// MARK: - Impl.ImageDownloadOperation
+
 extension Impl {
     final class ImageDownloadOperation {
         typealias Generator = () -> Callback<Image?>
@@ -47,6 +49,8 @@ extension Impl {
         }
     }
 }
+
+// MARK: - Impl.ImageDownloadOperation + ImageDownloadOperation
 
 extension Impl.ImageDownloadOperation: ImageDownloadOperation {
     func start() -> Callback<Image?> {

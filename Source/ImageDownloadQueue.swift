@@ -18,6 +18,8 @@ internal enum ImageDownloadQueuePriority: Comparable {
     case hasImageView
 }
 
+// MARK: - Impl.ImageDownloadQueue
+
 extension Impl {
     final class ImageDownloadQueue {
         typealias Priority = ImageDownloadQueuePriority
@@ -133,6 +135,8 @@ extension Impl {
         }
     }
 }
+
+// MARK: - Impl.ImageDownloadQueue + ImageDownloadQueue
 
 extension Impl.ImageDownloadQueue: ImageDownloadQueue {
     func add(requestGenerator: @autoclosure @escaping () -> Callback<Image?>,

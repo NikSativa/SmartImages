@@ -6,11 +6,15 @@ protocol ImageProcessing {
                  processors: [ImageProcessor]) -> Callback<Image>
 }
 
+// MARK: - Impl.ImageProcessing
+
 extension Impl {
     struct ImageProcessing {
         init() {}
     }
 }
+
+// MARK: - Impl.ImageProcessing + ImageProcessing
 
 extension Impl.ImageProcessing: ImageProcessing {
     func process(_ image: Image,

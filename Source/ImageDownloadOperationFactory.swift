@@ -8,11 +8,15 @@ protocol ImageDownloadOperationFactory {
               url: URL) -> ImageDownloadOperation
 }
 
+// MARK: - Impl.ImageDownloadOperationFactory
+
 extension Impl {
     final class ImageDownloadOperationFactory {
         init() {}
     }
 }
+
+// MARK: - Impl.ImageDownloadOperationFactory + ImageDownloadOperationFactory
 
 extension Impl.ImageDownloadOperationFactory: ImageDownloadOperationFactory {
     func make(requestGenerator: @escaping () -> Callback<Image?>,

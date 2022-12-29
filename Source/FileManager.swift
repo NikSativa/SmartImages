@@ -7,6 +7,8 @@ protocol FileManager {
     func urls(for directory: SearchPathDirectory, in domainMask: SearchPathDomainMask) -> [URL]
 }
 
+// MARK: - Impl.FileManager
+
 extension Impl {
     final class FileManager {
         private let fileManager: Foundation.FileManager
@@ -16,6 +18,8 @@ extension Impl {
         }
     }
 }
+
+// MARK: - Impl.FileManager + FileManager
 
 extension Impl.FileManager: FileManager {
     func urls(for directory: SearchPathDirectory, in domainMask: FileManager.SearchPathDomainMask) -> [URL] {
