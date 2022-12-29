@@ -26,9 +26,7 @@ extension Image {
         case five
     }
 
-    /**
-     This function returns a the same Image object each time it is called. For example, when you need to use the same image in tests to chech viewState for equality.
-     */
+    /// This function returns a the same Image object each time it is called. For example, when you need to use the same image in tests to chech viewState for equality.
     static func testMake(_ image: TastableImage = .default) -> Image {
         switch image {
         case .default:

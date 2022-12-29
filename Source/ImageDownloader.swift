@@ -44,6 +44,8 @@ public protocol ImageDownloader {
     func cancelDownloading(for imageView: ImageView)
 }
 
+// MARK: - Impl.ImageDownloader
+
 extension Impl {
     final class ImageDownloader<Error: AnyError> {
         private let decodingQueue: Queueable = Queue.custom(label: "ImageDownloader.decodingQueue",
@@ -287,6 +289,8 @@ extension Impl {
         }
     }
 }
+
+// MARK: - Impl.ImageDownloader + ImageDownloader
 
 extension Impl.ImageDownloader: ImageDownloader {
     func startDownloading(of configuration: ImageInfo) -> Callback<Image?> {

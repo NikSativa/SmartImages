@@ -5,6 +5,8 @@ import NSpry
 @testable import NImageDownloader
 @testable import NRequestTestHelpers
 
+// MARK: - ImageInfo + Equatable, SpryEquatable
+
 extension ImageInfo: Equatable, SpryEquatable {
     public static func testMake(url: URL = .testMake(),
                                 animation: Animation? = nil,

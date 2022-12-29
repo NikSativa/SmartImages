@@ -13,8 +13,10 @@ public extension ImageProcessor {
     }
 }
 
-// can be used as namespace for any ImageProcessor declared in any other place of app
+/// can be used as namespace for any ImageProcessor declared in any other place of app
 public enum ImageProcessors {}
+
+// MARK: - ImageProcessors.Composition
 
 public extension ImageProcessors {
     struct Composition {
@@ -25,6 +27,8 @@ public extension ImageProcessors {
         }
     }
 }
+
+// MARK: - ImageProcessors.Composition + ImageProcessor
 
 extension ImageProcessors.Composition: ImageProcessor {
     public func process(_ image: Image) -> Image {

@@ -1,6 +1,6 @@
 import Foundation
 
-// only for internal usage
+/// only for internal usage
 extension Image {
     private enum AssociatedKeys {
         static var sourceURL = "Network.ImageDownloader.imageURL"
