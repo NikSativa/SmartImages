@@ -1,39 +1,20 @@
 import Foundation
-import NCallback
 
-protocol ImageDecoding {
-    func decode(_ data: Data) -> Callback<Image?>
+public protocol ImageDecoding {
+    func decode(_ data: Data) -> Image?
 }
 
-// MARK: - Impl.ImageDecoding
+/// can be used as namespace for any ImageDecoder declared in any other place of app
+public enum ImageDecoders {}
 
-extension Impl {
-    struct ImageDecoding {
-        private let decoders: [ImageDecoder]
+// MARK: - ImageDecoders.Default
 
-        init(decoders: [ImageDecoder]) {
-            if decoders.contains(where: { $0 is ImageDecoders.Default }) {
-                self.decoders = decoders
-            } else {
-                self.decoders = decoders + [ImageDecoders.Default()]
-            }
-        }
-    }
-}
+public extension ImageDecoders {
+    struct Default: ImageDecoding {
+        public init() {}
 
-// MARK: - Impl.ImageDecoding + ImageDecoding
-
-extension Impl.ImageDecoding: ImageDecoding {
-    func decode(_ data: Data) -> Callback<Image?> {
-        return .init { [decoders] actual in
-            for decoder in decoders {
-                if let image = decoder.decode(data) {
-                    actual.complete(image)
-                    return
-                }
-            }
-
-            actual.complete(nil)
+        public func decode(_ data: Data) -> Image? {
+            return PlatformImage(data: data)?.sdk
         }
     }
 }

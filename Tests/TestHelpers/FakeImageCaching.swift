@@ -1,10 +1,9 @@
 import Foundation
-import NQueue
 import NSpry
 
 @testable import NImageDownloader
 
-final class FakeImageCache: ImageCache, Spryable {
+final class FakeImageCaching: ImageCaching, Spryable {
     enum ClassFunction: String, StringRepresentable {
         case empty
     }
@@ -18,15 +17,15 @@ final class FakeImageCache: ImageCache, Spryable {
 
     init() {}
 
-    func cached(for key: Key) -> Data? {
+    func cached(for key: URL) -> Data? {
         return spryify(arguments: key)
     }
 
-    func store(_ data: Data, for key: Key) {
+    func store(_ data: Data, for key: URL) {
         return spryify(arguments: data, key)
     }
 
-    func remove(for key: Key) {
+    func remove(for key: URL) {
         return spryify(arguments: key)
     }
 

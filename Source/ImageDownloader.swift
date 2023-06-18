@@ -1,7 +1,6 @@
+import Combine
 import Foundation
-import NCallback
 import NQueue
-import NRequest
 
 #if os(iOS) || os(tvOS) || os(watchOS)
 import UIKit
@@ -11,444 +10,320 @@ import Cocoa
 #error("unsupported os")
 #endif
 
-public protocol ImageDownloader {
-    // MARK: - Downloading
+public final class ImageDownloader {
+    private final class ClosureToken {
+        let closure: ImageClosure
 
-    func startDownloading(of info: ImageInfo) -> Callback<Image?>
-    func startDownloading(of url: URL) -> Callback<Image?>
-
-    func cancelDownloading(of info: [ImageInfo])
-    func cancelDownloading(of info: ImageInfo)
-    func cancelDownloading(of urls: [URL])
-    func cancelDownloading(of url: URL)
-
-    // MARK: - Prefetching
-
-    func startPrefetching(of info: [ImageInfo])
-    func startPrefetching(of info: ImageInfo)
-    func startPrefetching(of urls: [URL])
-    func startPrefetching(of url: URL)
-
-    func cancelPrefetching(of infos: [ImageInfo])
-    func cancelPrefetching(of info: ImageInfo)
-    func cancelPrefetching(of urls: [URL])
-    func cancelPrefetching(of url: URL)
-
-    // MARK: - ImageView
-
-    func startDownloading(of info: ImageInfo,
-                          for imageView: ImageView) -> Callback<Image?>
-    func startDownloading(of url: URL,
-                          for imageView: ImageView) -> Callback<Image?>
-
-    func cancelDownloading(for imageView: ImageView)
-}
-
-// MARK: - Impl.ImageDownloader
-
-extension Impl {
-    final class ImageDownloader<Error: AnyError> {
-        private let decodingQueue: Queueable = Queue.custom(label: "ImageDownloader.decodingQueue",
-                                                            qos: .utility,
-                                                            attributes: .concurrent)
-        private typealias Animation = ImageInfo.Animation
-        private typealias Priority = ImageInfo.Priority
-        private typealias Placeholder = ImageInfo.Placeholder
-        private typealias Parameters = NRequest.Parameters
-
-        private class Weakness {
-            @Atomic(mutex: Mutex.pthread(.recursive), read: .sync, write: .sync)
-            private var cached: [() -> ImageView?] = []
-
-            var views: [ImageView] {
-                return cached.compactMap {
-                    return $0()
-                }
-            }
-
-            var isEmpty: Bool {
-                return views.isEmpty
-            }
-
-            func add(_ imageView: ImageView) {
-                cached.append { [weak imageView] in
-                    return imageView
-                }
-            }
-
-            func remove(_ imageView: ImageView) {
-                cached = cached.filter {
-                    if let cached = $0() {
-                        return cached !== imageView
-                    }
-                    return false
-                }
-            }
+        init(closure: @escaping ImageClosure) {
+            self.closure = closure
         }
+    }
 
-        @Atomic(mutex: Mutex.pthread(.recursive), read: .sync, write: .sync)
-        private var pending: [URL: PendingCallback<Image?>] = [:]
-        @Atomic(mutex: Mutex.pthread(.recursive), read: .sync, write: .sync)
-        private var imageViewCache: [URL: Weakness] = [:]
+    private let mutex: Mutexing = Mutex.pthread(.recursive)
+    private let decodingQueue: Queueable = Queue.custom(label: "ImageDownloader.decodingQueue",
+                                                        qos: .utility,
+                                                        attributes: .concurrent)
+    private let mainQueue: Queueable = Queue.custom(label: "ImageDownloader.mainQueue",
+                                                    qos: .utility,
+                                                    attributes: .serial)
 
-        private let requestFactory: AnyRequestManager<Error>
-        private let imageCache: NImageDownloader.ImageCache
-        private let operationQueue: NImageDownloader.ImageDownloadQueue
-        private let imageProcessing: NImageDownloader.ImageProcessing
-        private let imageDecoding: NImageDownloader.ImageDecoding
+    private var cacheViews: [URL: WeakViews] = [:]
+    private var cacheClosures: [URL: [ClosureToken]] = [:]
+    private var cacheInfos: [URL: ImageInfo] = [:]
+    private var cacheActiveTasks: [URL: any Cancellable] = [:]
 
-        init(requestFactory: AnyRequestManager<Error>,
-             imageCache: NImageDownloader.ImageCache,
-             operationQueue: NImageDownloader.ImageDownloadQueue,
-             imageProcessing: NImageDownloader.ImageProcessing,
-             imageDecoding: NImageDownloader.ImageDecoding) {
-            self.requestFactory = requestFactory
-            self.imageCache = imageCache
-            self.imageProcessing = imageProcessing
-            self.imageDecoding = imageDecoding
-            self.operationQueue = operationQueue
-        }
+    private let network: ImageDownloaderNetwork
+    private let imageCache: ImageCaching?
+    private let imageDecoding: ImageDecodingProcessor
+    private let downloadQueue: ImageDownloadQueueing
 
-        private func request(with info: ImageInfo) -> Callback<Image?> {
-            let parameters = Parameters(address: .url(info.url),
-                                        requestPolicy: info.cachePolicy,
-                                        timeoutInterval: info.timeoutInterval,
-                                        queue: .async(decodingQueue))
-            let request = requestFactory.requestData(with: parameters)
-                .recoverNil()
-                .andThen { [imageDecoding] (data: Data?) -> Callback<Image?> in
-                    if let data = data {
-                        return imageDecoding.decode(data)
-                    }
-                    return .init(result: nil)
-                }
-                .polling(retryCount: 5,
-                         idleTimeInterval: 0,
-                         shouldRepeat: { result in
-                             return result.1 == nil
-                         })
-                .beforeComplete { [imageCache] result in
-                    if result.1 != nil,
-                       let data = result.0 {
-                        imageCache.store(data, for: info.url)
-                    } else {
-                        imageCache.remove(for: info.url)
-                    }
-                }
-                .second()
-            return request
-        }
+    internal init(network: ImageDownloaderNetwork,
+                  imageCache: ImageCaching? = nil,
+                  imageDecoding: ImageDecodingProcessor,
+                  downloadQueue: ImageDownloadQueueing) {
+        self.network = network
+        self.imageCache = imageCache
+        self.imageDecoding = imageDecoding
+        self.downloadQueue = downloadQueue
+    }
 
-        private func add(_ imageView: ImageView,
-                         for url: URL) {
-            $imageViewCache.mutate { imageViewCache in
-                imageViewCache = imageViewCache.filter { _, view in
-                    view.remove(imageView)
-                    return !view.isEmpty
-                }
+    public static func create(network: ImageDownloaderNetwork,
+                              cache: ImageCacheInfo? = nil,
+                              decoders: [ImageDecoding] = [ImageDecoders.Default()],
+                              concurrentImagesLimit limit: Int? = nil) -> ImageDownloader {
+        let imageCache: ImageCache? = cache.map(ImageCache.init(info:))
+        return .init(network: network,
+                     imageCache: imageCache,
+                     imageDecoding: ImageDecodingProcessor(decoders: decoders),
+                     downloadQueue: ImageDownloadQueue(concurrentImagesLimit: limit))
+    }
 
-                if let container = imageViewCache[url] {
-                    container.add(imageView)
-                } else {
-                    let container: Weakness = .init()
-                    container.add(imageView)
-                    imageViewCache[url] = container
-                }
-            }
-        }
-
-        private func schedule(_ info: ImageInfo) -> Callback<Image?> {
-            let pending: PendingCallback<Image?> = $pending.mutate { pending in
-                let result: PendingCallback<Image?>
-
-                if let cached = pending[info.url] {
-                    result = cached
-                } else {
-                    result = .init()
-                    result.beforeComplete { [weak self] _ in
-                        self?.$pending.mutate {
-                            $0[info.url] = nil
-                        }
-                    }
-                    pending[info.url] = result
-                }
-
-                return result
+    private func add(_ imageView: ImageView, for url: URL, completion: @escaping ImageClosure) {
+        mutex.sync {
+            cacheViews = cacheViews.filter { _, views in
+                views.remove(imageView)
+                views.filterNils()
+                return !views.isEmpty
             }
 
-            return pending.current { actual in
-                self.addOperation(configuration: info, actual: actual)
-            }
-        }
-
-        private func addOperation(configuration: ImageInfo,
-                                  actual: Callback<Image?>) {
-            let prioritizer: (URL) -> ImageDownloadQueuePriority = { [weak self] url in
-                if let imageViewCache = self?.imageViewCache,
-                   let cached = imageViewCache[url],
-                   !cached.isEmpty {
-                    return .hasImageView
-                }
-
-                return .preset(configuration.priority)
-            }
-
-            // swiftformat:disable:next redundantSelf
-            operationQueue.add(requestGenerator: self.request(with: configuration),
-                               completionCallback: actual,
-                               url: configuration.url,
-                               prioritizer: prioritizer)
-        }
-
-        private func removeOperation(for url: URL) {
-            $pending.mutate { pending in
-                pending[url]?.cancel()
-            }
-            operationQueue.cancel(for: url)
-        }
-
-        private func cachedImage(for info: ImageInfo) -> Callback<Image?>? {
-            if let data = imageCache[info.url] {
-                return imageDecoding.decode(data)
-                    .andThen { [imageProcessing] image in
-                        if let image = image {
-                            return imageProcessing.process(image, processors: info.processors).flatMap {
-                                return $0
-                            }
-                        }
-                        return .init(result: nil)
-                    }
-                    .second()
-                    .beforeComplete { [imageCache] result in
-                        if result == nil {
-                            imageCache.remove(for: info.url)
-                        }
-                    }
-            }
-            return nil
-        }
-
-        private func setToImageViews(_ image: Image?,
-                                     info: ImageInfo,
-                                     cleanup: Bool,
-                                     animated: Bool) {
-            let selected: [ImageView]? = $imageViewCache.mutate { imageViewCache in
-                let selected = imageViewCache[info.url]?.views
-
-                if cleanup {
-                    imageViewCache[info.url] = nil
-                }
-
-                return selected
-            }
-
-            if let selected = selected, !selected.isEmpty {
-                Queue.main.sync {
-                    for view in selected {
-                        if animated {
-                            info.animation.animate(view, image: image)
-                        } else {
-                            view.image = image
-                        }
-                    }
-                }
-            }
-
-            if cleanup {
-                removeOperation(for: info.url)
-            }
-        }
-
-        private func setPlaceholder(to imageView: ImageView,
-                                    info: ImageInfo,
-                                    scheduled: Callback<Image?>) -> Callback<Image?> {
-            switch info.placeholder {
-            case .ignore:
-                return scheduled
-            case .clear:
-                return .init { actual in
-                    Queue.main.sync {
-                        imageView.image = nil
-                    }
-
-                    actual.waitCompletion(of: scheduled)
-                }
-            case .image(let placeholder):
-                return .init { [imageProcessing] actual in
-                    imageProcessing.process(placeholder,
-                                            processors: info.processors)
-                        .onComplete { placeholder in
-                            self.setToImageViews(placeholder,
-                                                 info: info,
-                                                 cleanup: false,
-                                                 animated: false)
-                            actual.waitCompletion(of: scheduled)
-                        }
-                }
+            if let container = cacheViews[url] {
+                container.add(imageView, completion: completion)
+            } else {
+                let container: WeakViews = .init()
+                container.add(imageView, completion: completion)
+                cacheViews[url] = container
             }
         }
     }
-}
 
-// MARK: - Impl.ImageDownloader + ImageDownloader
-
-extension Impl.ImageDownloader: ImageDownloader {
-    func startDownloading(of configuration: ImageInfo) -> Callback<Image?> {
-        assert(Thread.isMainThread)
-
-        if let cachedImage = cachedImage(for: configuration) {
-            return cachedImage
+    private func add(_ url: URL, with completion: @escaping ImageClosure) -> ClosureToken {
+        return mutex.sync {
+            let uniq = ClosureToken(closure: completion)
+            var arr = cacheClosures[url] ?? []
+            arr.append(uniq)
+            cacheClosures[url] = arr
+            return uniq
         }
-        return schedule(configuration)
     }
 
-    func startDownloading(of url: URL) -> Callback<Image?> {
-        return startDownloading(of: .init(url: url))
+    private func addInfoIfNeeded(_ info: ImageInfo) {
+        mutex.sync {
+            if let cached = cacheInfos[info.url] {
+                if cached.priority < info.priority {
+                    cacheInfos[info.url] = info
+                }
+            } else {
+                cacheInfos[info.url] = info
+            }
+        }
     }
 
-    func startDownloading(of info: ImageInfo, for imageView: ImageView) -> Callback<Image?> {
-        assert(Thread.isMainThread)
-        cancelDownloading(for: imageView)
+    private func checkCachedImage(for info: ImageInfo,
+                                  animated animation: ImageAnimation?) -> Bool {
+        if let data = imageCache?.cached(for: info.url) {
+            decodingQueue.async { [self] in
+                handleLoaded(.success(data), animated: animation, for: info.url)
+            }
+            return true
+        }
+        return false
+    }
 
+    private func scheduleDownload(of info: ImageInfo,
+                                  animated animation: ImageAnimation?) {
+        if checkCachedImage(for: info, animated: animation) {
+            return
+        }
+
+        let url = info.url
+        let prioritizer: () -> ImageDownloadQueuePriority = { [weak self] in
+            guard let self else {
+                return .preset(info.priority)
+            }
+
+            return mutex.sync {
+                if let cached = self.cacheViews[url] {
+                    cached.filterNils()
+                    if !cached.isEmpty {
+                        return .hasImageView
+                    }
+                }
+
+                if let cached = self.cacheInfos[url] {
+                    return .preset(cached.priority)
+                }
+
+                return .preset(info.priority)
+            }
+        }
+
+        downloadQueue.add(hash: url, prioritizer: prioritizer) { [unowned self] completion in
+            let info = mutex.sync {
+                return cacheInfos[url]
+            }
+
+            let task = network.request(with: info?.url ?? url,
+                                       cachePolicy: info?.cachePolicy ?? .useProtocolCachePolicy,
+                                       timeoutInterval: info?.timeoutInterval ?? 60) { [self] result in
+                mutex.sync {
+                    cacheActiveTasks[url] = nil
+                }
+
+                completion()
+                decodingQueue.async { [self] in
+                    handleLoaded(result, animated: animation, for: url)
+                }
+            }
+
+            mutex.sync {
+                cacheActiveTasks[url] = task
+            }
+            task.start()
+        }
+    }
+
+    private func handleLoaded(_ result: Result<Data, Error>,
+                              animated animation: ImageAnimation?,
+                              for url: URL) {
+        assert(!Thread.isMainThread)
+
+        let (info, views, closures) = mutex.sync {
+            defer {
+                cacheInfos[url] = nil
+                cacheViews[url] = nil
+                cacheClosures[url] = nil
+            }
+
+            let views = (cacheViews[url]?.cached ?? []).map {
+                return WeakViews.InstanceStub(completion: $0.completion,
+                                              view: $0.view())
+            }
+            let closures = (cacheClosures[url] ?? []).map(\.closure)
+            return (cacheInfos[url], views, closures)
+        }
+
+        let completion: ImageClosure = { [self, url] image in
+            image?.sourceURL = url
+            handle(image,
+                   animated: animation,
+                   views: views,
+                   closures: closures)
+        }
+
+        switch result {
+        case .success(let success):
+            let image = imageDecoding.decode(success)
+            if let image {
+                imageCache?.store(success, for: url)
+
+                let processor = ImageProcessors.Composition(processors: info?.processors ?? [])
+                let processedImage = processor.process(image)
+                completion(processedImage)
+            } else {
+                imageCache?.remove(for: url)
+                completion(nil)
+            }
+        case .failure:
+            imageCache?.remove(for: url)
+            completion(nil)
+        }
+    }
+
+    private func handle(_ image: Image?,
+                        animated animation: ImageAnimation?,
+                        views: [WeakViews.InstanceStub],
+                        closures: [ImageClosure]) {
+        Queue.main.async {
+            for cached in views {
+                if let view = cached.view {
+                    animation.animate(view, image: image)
+                }
+                cached.completion(image)
+            }
+
+            for cl in closures {
+                cl(image)
+            }
+        }
+    }
+
+    private func needDownload(of info: ImageInfo, for imageView: ImageView) -> Bool {
         if info.cachePolicy.canUseCachedData,
            let image = imageView.image,
            let currentSourceURL = image.sourceURL,
            currentSourceURL == info.url {
-            return .init(result: image)
+            return false
         }
-
-        add(imageView, for: info.url)
-
-        var scheduled: Callback<Image?> = .init { actual in
-            let scheduled = self.schedule(info)
-            scheduled.onComplete { [actual] image in
-                self.setToImageViews(image,
-                                     info: info,
-                                     cleanup: true,
-                                     animated: true)
-                actual.complete(image)
-            }
-        }
-
-        if let cachedImage = cachedImage(for: info) {
-            let loader = scheduled
-            scheduled = cachedImage.andThen { image -> Callback<Image?> in
-                if let image = image {
-                    return .init(result: image)
-                } else {
-                    return loader
-                }
-            }
-            .second()
-            .beforeComplete { image in
-                self.setToImageViews(image,
-                                     info: info,
-                                     cleanup: true,
-                                     animated: true)
-            }
-        }
-
-        return setPlaceholder(to: imageView,
-                              info: info,
-                              scheduled: scheduled)
-    }
-
-    func startDownloading(of url: URL, for imageView: ImageView) -> Callback<Image?> {
-        return startDownloading(of: .init(url: url), for: imageView)
-    }
-
-    func cancelDownloading(of configurations: [ImageInfo]) {
-        let urls = configurations.map(\.url)
-        cancelDownloading(of: urls)
-    }
-
-    func cancelDownloading(of configuration: ImageInfo) {
-        cancelDownloading(of: [configuration.url])
-    }
-
-    func cancelDownloading(of urls: [URL]) {
-        assert(Thread.isMainThread)
-
-        $imageViewCache.mutate { imageViewCache in
-            for url in urls {
-                if imageViewCache[url]?.isEmpty == true {
-                    removeOperation(for: url)
-                }
-            }
-        }
-    }
-
-    func cancelDownloading(of url: URL) {
-        cancelDownloading(of: [url])
-    }
-
-    func cancelDownloading(for imageView: ImageView) {
-        assert(Thread.isMainThread)
-
-        $imageViewCache.mutate { imageViewCache in
-            imageViewCache = imageViewCache.filter { url, view in
-                view.remove(imageView)
-
-                if view.isEmpty {
-                    removeOperation(for: url)
-                }
-
-                return !view.isEmpty
-            }
-        }
-    }
-
-    func startPrefetching(of configurations: [ImageInfo]) {
-        for configuration in configurations {
-            startDownloading(of: configuration).oneWay()
-        }
-    }
-
-    func startPrefetching(of configuration: ImageInfo) {
-        startPrefetching(of: [configuration])
-    }
-
-    func startPrefetching(of urls: [URL]) {
-        let infos = urls.map {
-            return ImageInfo(url: $0, priority: .prefetch)
-        }
-        startPrefetching(of: infos)
-    }
-
-    func startPrefetching(of url: URL) {
-        startPrefetching(of: [url])
-    }
-
-    func cancelPrefetching(of configurations: [ImageInfo]) {
-        let urls = configurations.map(\.url)
-        cancelPrefetching(of: urls)
-    }
-
-    func cancelPrefetching(of configuration: ImageInfo) {
-        let url = configuration.url
-        cancelPrefetching(of: url)
-    }
-
-    func cancelPrefetching(of urls: [URL]) {
-        cancelDownloading(of: urls)
-    }
-
-    func cancelPrefetching(of url: URL) {
-        cancelPrefetching(of: [url])
+        return true
     }
 }
 
-private extension Optional where Wrapped == ImageInfo.Animation {
+// MARK: - ImageDownloading
+
+extension ImageDownloader: ImageDownloading {
+    public func download(of info: ImageInfo,
+                         for imageView: ImageView,
+                         animated animation: ImageAnimation?,
+                         completion: @escaping ImageClosure) {
+        guard needDownload(of: info, for: imageView) else {
+            return
+        }
+
+        add(imageView, for: info.url, completion: completion)
+        addInfoIfNeeded(info)
+        scheduleDownload(of: info, animated: animation)
+    }
+
+    public func download(of info: ImageInfo,
+                         completion: @escaping ImageClosure) -> AnyCancellable {
+        let url = info.url
+        let uniq = add(url, with: completion)
+
+        addInfoIfNeeded(info)
+        scheduleDownload(of: info, animated: nil)
+
+        return .init { [weak self, uniq, url] in
+            guard let self else {
+                return
+            }
+
+            mutex.sync { [weak self] in
+                guard let self else {
+                    return
+                }
+
+                var arr = cacheClosures[url] ?? []
+                arr = arr.filter {
+                    return uniq !== $0
+                }
+
+                if arr.isEmpty {
+                    cacheClosures[url] = nil
+
+                    if cacheViews[url] == nil {
+                        cacheInfos[url] = nil
+                        cacheActiveTasks[url]?.cancel()
+                        cacheActiveTasks[url] = nil
+                    }
+                } else {
+                    cacheClosures[url] = arr
+                }
+            }
+        }
+    }
+
+    public func predownload(of info: ImageInfo,
+                            completion: @escaping ImageClosure) {
+        _ = add(info.url, with: completion)
+        addInfoIfNeeded(info)
+        scheduleDownload(of: info, animated: nil)
+    }
+
+    public func cancel(for imageView: ImageView) {
+        mutex.sync {
+            cacheViews = cacheViews.filter { _, views in
+                views.remove(imageView)
+                views.filterNils()
+                return !views.isEmpty
+            }
+        }
+    }
+}
+
+private extension ImageAnimation? {
     func animate(_ imageView: ImageView, image: Image?) {
+        // ignore nil, to leave placeholder
+        guard let image else {
+            return
+        }
+
         assert(Thread.isMainThread)
         switch self {
-        case .none:
-            imageView.image = image
         #if os(iOS) || os(tvOS) || os(watchOS)
         case .crossDissolve:
-            if image?.size == imageView.image?.size,
+            if image.size == imageView.image?.size,
                let currentSourceURL = imageView.image?.sourceURL,
-               image?.sourceURL == currentSourceURL {
+               image.sourceURL == currentSourceURL {
                 return // No need to animate the same image, it’s already here
             }
 
@@ -459,11 +334,57 @@ private extension Optional where Wrapped == ImageInfo.Animation {
                                   imageView.image = image
                               })
         #elseif os(macOS)
-        case .noAnimation:
-            imageView.image = image
+        // not supported yet
         #else
             #error("unsupported os")
         #endif
+
+        case .custom(let animation):
+            animation(imageView, image)
+
+        case .none:
+            imageView.image = image
+        }
+    }
+}
+
+private final class WeakViews {
+    struct Stub {
+        let completion: ImageClosure
+        let view: () -> ImageView?
+    }
+
+    /// used to instantiate and retain ImageView from Stub and then to run on main queue
+    struct InstanceStub {
+        let completion: ImageClosure
+        let view: ImageView?
+    }
+
+    private(set) var cached: [Stub] = []
+
+    var isEmpty: Bool {
+        return cached.isEmpty
+    }
+
+    func add(_ imageView: ImageView, completion: @escaping ImageClosure) {
+        let stub: Stub = .init(completion: completion) { [weak imageView] in
+            return imageView
+        }
+        cached.append(stub)
+    }
+
+    func remove(_ imageView: ImageView) {
+        cached = cached.filter {
+            if let cached = $0.view() {
+                return cached !== imageView
+            }
+            return false
+        }
+    }
+
+    func filterNils() {
+        cached = cached.filter { stub in
+            return stub.view() != nil
         }
     }
 }

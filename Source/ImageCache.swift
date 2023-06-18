@@ -1,58 +1,34 @@
 import Foundation
 import NQueue
-import NRequest
 
-protocol ImageCache {
-    typealias Key = URL
-
-    func cached(for key: Key) -> Data?
-    func store(_ data: Data, for key: Key)
-    func remove(for key: Key)
+internal protocol ImageCaching {
+    func cached(for key: URL) -> Data?
+    func store(_ data: Data, for key: URL)
+    func remove(for key: URL)
     func removeAll()
 }
 
-extension ImageCache {
-    subscript(_ key: Key) -> Data? {
-        return cached(for: key)
+internal final class ImageCache {
+    private let mutex: Mutexing = Mutex.pthread(.recursive)
+    internal let urlCache: URLCache
+
+    init(info: ImageCacheInfo = .init()) {
+        self.urlCache = URLCache(memoryCapacity: info.memoryCapacity,
+                                 diskCapacity: info.diskCapacity,
+                                 directory: info.directory)
     }
 }
 
-// MARK: - Impl.ImageCache
+// MARK: - ImageCaching
 
-extension Impl {
-    final class ImageCache {
-        private let mutex: Mutexing = Mutex.pthread(.recursive)
-        internal let urlCache: URLCache
-
-        init(fileManager: NImageDownloader.FileManager) {
-            let folderName = "Images"
-            if #available(iOS 13, macOS 10.15, *) {
-                let urls = fileManager.urls(for: .cachesDirectory,
-                                            in: .userDomainMask)
-                let directory = urls.first?.appendingPathComponent(folderName, isDirectory: true)
-
-                urlCache = URLCache(memoryCapacity: 40 * 1024 * 1024,
-                                    diskCapacity: 400 * 1024 * 1024,
-                                    directory: directory)
-            } else {
-                self.urlCache = URLCache(memoryCapacity: 40 * 1024 * 1024,
-                                         diskCapacity: 400 * 1024 * 1024,
-                                         diskPath: folderName)
-            }
-        }
-    }
-}
-
-// MARK: - Impl.ImageCache + ImageCache
-
-extension Impl.ImageCache: ImageCache {
-    func cached(for key: Key) -> Data? {
+extension ImageCache: ImageCaching {
+    func cached(for key: URL) -> Data? {
         return mutex.sync {
-            return urlCache.cachedResponse(for: key.did)?.data
+            return urlCache.cachedResponse(for: key.request)?.data
         }
     }
 
-    func store(_ data: Data, for key: Key) {
+    func store(_ data: Data, for key: URL) {
         return mutex.sync {
             let response = CachedURLResponse(response: .init(url: key,
                                                              mimeType: nil,
@@ -61,13 +37,13 @@ extension Impl.ImageCache: ImageCache {
                                              data: data,
                                              userInfo: nil,
                                              storagePolicy: .allowed)
-            urlCache.storeCachedResponse(response, for: key.did)
+            urlCache.storeCachedResponse(response, for: key.request)
         }
     }
 
-    func remove(for key: Key) {
+    func remove(for key: URL) {
         return mutex.sync {
-            urlCache.removeCachedResponse(for: key.did)
+            urlCache.removeCachedResponse(for: key.request)
         }
     }
 
@@ -79,7 +55,7 @@ extension Impl.ImageCache: ImageCache {
 }
 
 private extension URL {
-    var did: URLRequest {
+    var request: URLRequest {
         return .init(url: self)
     }
 }

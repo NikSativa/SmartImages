@@ -3,18 +3,18 @@ import NSpry
 
 @testable import NImageDownloader
 
-final class FakeImageDecoder: ImageDecoder, Spryable {
-    enum ClassFunction: String, StringRepresentable {
+public final class FakeImageDecoder: ImageDecoding, Spryable {
+    public enum ClassFunction: String, StringRepresentable {
         case empty
     }
 
-    enum Function: String, StringRepresentable {
+    public enum Function: String, StringRepresentable {
         case decode = "decode(_:)"
     }
 
-    init() {}
+    public init() {}
 
-    func decode(_ data: Data) -> Image? {
+    public func decode(_ data: Data) -> Image? {
         return spryify(arguments: data)
     }
 }

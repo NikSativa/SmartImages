@@ -1,191 +1,129 @@
 import Foundation
-import NCallback
 import NQueue
 
-protocol ImageDownloadQueue {
-    typealias Priority = ImageDownloadQueuePriority
-    typealias Operation = ImageDownloadOperation
-
-    func add(requestGenerator: @autoclosure @escaping () -> Callback<Image?>,
-             completionCallback: Callback<Image?>,
-             url: URL,
-             prioritizer: @escaping (URL) -> Priority)
-    func cancel(for url: URL)
-}
-
 internal enum ImageDownloadQueuePriority: Comparable {
-    case preset(ImageInfo.Priority)
+    case preset(ImagePriority)
     case hasImageView
 }
 
-// MARK: - Impl.ImageDownloadQueue
+internal protocol ImageDownloadQueueing {
+    func add(hash: AnyHashable,
+             prioritizer: @escaping () -> ImageDownloadQueuePriority,
+             starter: @escaping (_ completion: @escaping VoidClosure) -> Void)
+}
 
-extension Impl {
-    final class ImageDownloadQueue {
-        typealias Priority = ImageDownloadQueuePriority
+internal final class ImageDownloadQueue {
+    typealias Priority = ImageDownloadQueuePriority
 
-        private struct Operation: Hashable {
-            private let prioritizer: (URL) -> Priority
-            let original: NImageDownloader.ImageDownloadOperation
+    private let mutex: Mutexing = Mutex.pthread(.recursive)
+    private let operationQueue: Queueable
 
-            init(prioritizer: @escaping (URL) -> Priority,
-                 original: NImageDownloader.ImageDownloadOperation) {
-                self.prioritizer = prioritizer
-                self.original = original
-            }
+    private var scheduledOperations: [Operation] = []
+    private var runningOperations: [Operation] = []
+    private let maxConcurrentOperationCount: Int
+    private var isScheduled: Bool = false
 
-            func priority() -> Priority {
-                return prioritizer(original.url)
-            }
-
-            func hash(into hasher: inout Hasher) {
-                hasher.combine(original.url)
-            }
-
-            static func ==(lhs: Impl.ImageDownloadQueue.Operation, rhs: Impl.ImageDownloadQueue.Operation) -> Bool {
-                return lhs.original.url == rhs.original.url
-            }
-        }
-
-        @Atomic(mutex: Mutex.pthread(.recursive), read: .sync, write: .sync)
-        private var syncedOperations: [() -> Void] = []
-        private var operationQueue: Queueable = Queue.custom(label: "ImageDownloadQueue.Operation",
+    init(concurrentImagesLimit limit: Int?,
+         operationQueue: Queueable? = nil) {
+        self.operationQueue = operationQueue ?? Queue.custom(label: "ImageDownloadQueue.Operation",
                                                              qos: .utility,
-                                                             attributes: .concurrent)
-        private var scheduleQueue: Queueable = Queue.custom(label: "ImageDownloadQueue.Scheduling",
-                                                            qos: .utility,
-                                                            attributes: .serial)
+                                                             attributes: .serial)
+        self.maxConcurrentOperationCount = limit.map {
+            return max($0, 1)
+        } ?? .max
+    }
 
-        private let operationFactory: NImageDownloader.ImageDownloadOperationFactory
-        private var scheduledOperations: [Operation] = []
-        private var runningOperations: [Operation] = []
-        private let maxConcurrentOperationCount: Int
-        private var isScheduled: Bool = false
-
-        init(concurrentImagesLimit: ConcurrentImagesLimit,
-             operationFactory: NImageDownloader.ImageDownloadOperationFactory) {
-            self.operationFactory = operationFactory
-
-            switch concurrentImagesLimit {
-            case .infinite:
-                self.maxConcurrentOperationCount = .max
-            case .other(let count):
-                self.maxConcurrentOperationCount = max(count, 1)
-            }
+    private func scheduleUpdate() {
+        if isScheduled {
+            return
         }
-
-        private func scheduleUpdate() {
-            if isScheduled {
-                return
-            }
+        mutex.sync {
             isScheduled = true
-            applyOperations()
         }
 
-        private func applyOperations() {
-            operationQueue.async { [weak self] in
-                guard let self = self else {
-                    return
-                }
+        operationQueue.async { [weak self] in
+            self?.checkQueue()
 
-                for operation in self.syncedOperations {
-                    operation()
-                }
-                self.syncedOperations = []
-
-                if self.isScheduled {
-                    self.checkQueue()
-                }
-
-                self.isScheduled = false
+            self?.mutex.sync {
+                self?.isScheduled = false
             }
         }
+    }
 
-        private func checkQueue() {
-            runningOperations = runningOperations.filter {
-                return $0.original.state == .running
-            }
-
+    private func checkQueue() {
+        mutex.sync {
             var operations = scheduledOperations
-                .filter {
-                    return $0.original.state == .idle
-                }
-                .map {
-                    return (element: $0, original: $0.original, priority: $0.priority())
-                }
                 .sorted(by: {
-                    if $0.priority == $1.priority {
-                        return $0.original.timestamp >= $1.original.timestamp
+                    let a = $0.priority()
+                    let b = $1.priority()
+                    if a == b {
+                        return $0.timestamp >= $1.timestamp
                     }
-                    return $0.priority > $1.priority
+                    return a > b
                 })
 
             while !operations.isEmpty, runningOperations.count < maxConcurrentOperationCount {
                 let operation = operations.removeFirst()
-                runningOperations.append(operation.element)
-
-                operation.original.start()
-                    .schedule(completionIn: scheduleQueue)
-                    .onComplete { [weak self] _ in
-                        self?.scheduleUpdate()
+                runningOperations.append(operation)
+                operation.starter { [self] in
+                    operationQueue.async { [self] in
+                        operationDidFinished(operation)
                     }
-            }
-
-            scheduledOperations = operations.map(\.element)
-        }
-    }
-}
-
-// MARK: - Impl.ImageDownloadQueue + ImageDownloadQueue
-
-extension Impl.ImageDownloadQueue: ImageDownloadQueue {
-    func add(requestGenerator: @autoclosure @escaping () -> Callback<Image?>,
-             completionCallback: Callback<Image?>,
-             url: URL,
-             prioritizer: @escaping (URL) -> Priority) {
-        let originalOperation = operationFactory.make(requestGenerator: requestGenerator,
-                                                      completionCallback: completionCallback,
-                                                      url: url)
-        let operation = Operation(prioritizer: prioritizer,
-                                  original: originalOperation)
-        syncedOperations.append {
-            self.scheduledOperations.append(operation)
-        }
-        scheduleUpdate()
-    }
-
-    func cancel(for url: URL) {
-        syncedOperations.append {
-            let operations = self.scheduledOperations + self.runningOperations
-            for operation in operations {
-                let operation = operation.original
-                if operation.state != .canceled, operation.url == url {
-                    operation.cancel()
                 }
             }
+
+            scheduledOperations = operations
+        }
+    }
+
+    private func operationDidFinished(_ operation: Operation) {
+        mutex.sync {
+            runningOperations.removeAll { cached in
+                return cached == operation
+            }
         }
         scheduleUpdate()
     }
 }
 
-private extension Impl.ImageDownloadQueue.Priority {
-    var logDescription: String {
-        switch self {
-        case .preset(let priority):
-            switch priority {
-            case .veryLow:
-                return "veryLow"
-            case .low:
-                return "low"
-            case .normal:
-                return "normal"
-            case .high:
-                return "high"
-            case .veryHight:
-                return "veryHight"
-            }
-        case .hasImageView:
-            return "hasImageView"
+// MARK: - ImageDownloadQueueing
+
+extension ImageDownloadQueue: ImageDownloadQueueing {
+    func add(hash: AnyHashable,
+             prioritizer: @escaping () -> Priority,
+             starter: @escaping (_ completion: @escaping VoidClosure) -> Void) {
+        mutex.sync {
+            let operation = Operation(hash: hash, prioritizer: prioritizer, starter: starter)
+            scheduledOperations.append(operation)
+        }
+        scheduleUpdate()
+    }
+}
+
+// MARK: - ImageDownloadQueue.Operation
+
+private extension ImageDownloadQueue {
+    struct Operation: Equatable {
+        private let prioritizer: () -> Priority
+
+        let hash: AnyHashable
+        let starter: (@escaping VoidClosure) -> Void
+        let timestamp: TimeInterval = Date().timeIntervalSinceReferenceDate
+
+        init(hash: AnyHashable,
+             prioritizer: @escaping () -> Priority,
+             starter: @escaping (@escaping VoidClosure) -> Void) {
+            self.hash = hash
+            self.prioritizer = prioritizer
+            self.starter = starter
+        }
+
+        func priority() -> Priority {
+            return prioritizer()
+        }
+
+        static func ==(lhs: Operation, rhs: Operation) -> Bool {
+            return lhs.hash == rhs.hash
         }
     }
 }
