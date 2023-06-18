@@ -1,92 +1,44 @@
+import Combine
 import Foundation
-import NCallback
 import NSpry
 
 @testable import NImageDownloader
 
-final class FakeImageDownloading: ImageDownloader, Spryable {
-    enum ClassFunction: String, StringRepresentable {
+public final class FakeImageDownloading: ImageDownloading, Spryable {
+    public enum ClassFunction: String, StringRepresentable {
         case empty
     }
 
-    enum Function: String, StringRepresentable {
-        case startDownloading = "startDownloading(of:)"
-        case startDownloadingToImageView = "startDownloading(of:for:)"
-
-        case cancelDownloading = "cancelDownloading(of:)"
-        case cancelDownloadingForImageView = "cancelDownloading(for:)"
-
-        case startPrefetching = "startPrefetching(of:)"
-        case cancelPrefetching = "cancelPrefetching(of:)"
+    public enum Function: String, StringRepresentable {
+        case downloadView = "download(of:for:animated:completion:)"
+        case downloadInfo = "download(of:completion:)"
+        case predownload = "predownload(of:completion:)"
+        case cancel = "cancel(for:)"
     }
 
-    init() {}
+    public init() {}
 
-    func startDownloading(of info: ImageInfo) -> Callback<Image?> {
-        return spryify(arguments: info)
+    public var completion: ImageClosure?
+    public func download(of info: ImageInfo,
+                         for imageView: ImageView,
+                         animated animation: ImageAnimation?,
+                         completion: @escaping ImageClosure) {
+        self.completion = completion
+        return spryify(arguments: info, imageView, animation, completion)
     }
 
-    func startDownloading(of info: ImageInfo, for imageView: ImageView) -> Callback<Image?> {
-        return spryify(arguments: info, imageView)
+    public func download(of info: ImageInfo,
+                         completion: @escaping ImageClosure) -> AnyCancellable {
+        self.completion = completion
+        return spryify(arguments: info, completion)
     }
 
-    func startDownloading(of url: URL) -> Callback<Image?> {
-        return spryify(arguments: url)
+    public func predownload(of info: ImageInfo, completion: @escaping ImageClosure) {
+        self.completion = completion
+        return spryify(arguments: info, completion)
     }
 
-    func startDownloading(of url: URL, for imageView: ImageView) -> Callback<Image?> {
-        return spryify(arguments: url, imageView)
-    }
-
-    func cancelDownloading(of infos: [ImageInfo]) {
-        return spryify(arguments: infos)
-    }
-
-    func cancelDownloading(of info: ImageInfo) {
-        return spryify(arguments: info)
-    }
-
-    func cancelDownloading(of urls: [URL]) {
-        return spryify(arguments: urls)
-    }
-
-    func cancelDownloading(of url: URL) {
-        return spryify(arguments: url)
-    }
-
-    func cancelDownloading(for imageView: ImageView) {
+    public func cancel(for imageView: ImageView) {
         return spryify(arguments: imageView)
-    }
-
-    func startPrefetching(of infos: [ImageInfo]) {
-        return spryify(arguments: infos)
-    }
-
-    func startPrefetching(of info: ImageInfo) {
-        return spryify(arguments: info)
-    }
-
-    func startPrefetching(of urls: [URL]) {
-        return spryify(arguments: urls)
-    }
-
-    func startPrefetching(of url: URL) {
-        return spryify(arguments: url)
-    }
-
-    func cancelPrefetching(of infos: [ImageInfo]) {
-        return spryify(arguments: infos)
-    }
-
-    func cancelPrefetching(of info: ImageInfo) {
-        return spryify(arguments: info)
-    }
-
-    func cancelPrefetching(of urls: [URL]) {
-        return spryify(arguments: urls)
-    }
-
-    func cancelPrefetching(of url: URL) {
-        return spryify(arguments: url)
     }
 }

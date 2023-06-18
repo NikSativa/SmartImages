@@ -1,16 +1,8 @@
 import Foundation
-import NCallback
 import NQueue
 
 public protocol ImageProcessor {
-    var name: String { get }
     func process(_ image: Image) -> Image
-}
-
-public extension ImageProcessor {
-    var name: String {
-        return String(reflecting: self)
-    }
 }
 
 /// can be used as namespace for any ImageProcessor declared in any other place of app

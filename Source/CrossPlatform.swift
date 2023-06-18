@@ -1,5 +1,8 @@
 import Foundation
 
+internal typealias VoidClosure = () -> Void
+public typealias ImageClosure = (Image?) -> Void
+
 #if os(iOS) || os(tvOS) || os(watchOS)
 import UIKit
 

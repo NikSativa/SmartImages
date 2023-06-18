@@ -3,18 +3,18 @@ import NSpry
 
 @testable import NImageDownloader
 
-final class FakeImageProcessor: ImageProcessor, Spryable {
-    enum ClassFunction: String, StringRepresentable {
+public final class FakeImageProcessor: ImageProcessor, Spryable {
+    public enum ClassFunction: String, StringRepresentable {
         case empty
     }
 
-    enum Function: String, StringRepresentable {
+    public enum Function: String, StringRepresentable {
         case process = "process(_:)"
     }
 
-    init() {}
+    public init() {}
 
-    func process(_ image: Image) -> Image {
+    public func process(_ image: Image) -> Image {
         return spryify(arguments: image)
     }
 }

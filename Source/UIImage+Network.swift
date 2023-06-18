@@ -1,12 +1,12 @@
 import Foundation
 
 /// only for internal usage
-extension Image {
+internal extension Image {
     private enum AssociatedKeys {
         static var sourceURL = "Network.ImageDownloader.imageURL"
     }
 
-    @objc internal var sourceURL: URL? {
+    @objc var sourceURL: URL? {
         get {
             return objc_getAssociatedObject(self, &AssociatedKeys.sourceURL) as? URL
         }
