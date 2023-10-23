@@ -3,7 +3,7 @@ import Foundation
 /// only for internal usage
 internal extension Image {
     private enum AssociatedKeys {
-        static var sourceURL = "Network.ImageDownloader.imageURL"
+        static var sourceURL: StaticString = "Network.ImageDownloader.imageURL"
     }
 
     @objc var sourceURL: URL? {
