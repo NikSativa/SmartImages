@@ -1,7 +1,7 @@
 import Foundation
 import NQueue
 
-#if os(iOS) || os(tvOS) || os(watchOS)
+#if os(iOS) || os(tvOS) || os(visionOS) || os(watchOS)
 import UIKit
 #elseif os(macOS)
 import Cocoa

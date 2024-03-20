@@ -2,7 +2,7 @@ import Combine
 import Foundation
 import NQueue
 
-#if os(iOS) || os(tvOS) || os(watchOS)
+#if os(iOS) || os(tvOS) || os(watchOS) || os(visionOS)
 import UIKit
 #elseif os(macOS)
 import Cocoa
@@ -319,7 +319,7 @@ private extension ImageAnimation? {
 
         assert(Thread.isMainThread)
         switch self {
-        #if os(iOS) || os(tvOS) || os(watchOS)
+        #if os(iOS) || os(tvOS)
         case .crossDissolve:
             if image.size == imageView.image?.size,
                let currentSourceURL = imageView.image?.sourceURL,
@@ -333,7 +333,7 @@ private extension ImageAnimation? {
                               animations: {
                                   imageView.image = image
                               })
-        #elseif os(macOS)
+        #elseif os(macOS) || os(watchOS) || os(visionOS)
         // not supported yet
         #else
             #error("unsupported os")

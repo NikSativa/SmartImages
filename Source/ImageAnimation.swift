@@ -1,9 +1,9 @@
 import Foundation
 
 public enum ImageAnimation {
-    #if os(iOS) || os(tvOS) || os(watchOS)
+    #if os(iOS) || os(tvOS)
     case crossDissolve
-    #elseif os(macOS)
+    #elseif os(macOS) || os(watchOS) || os(visionOS)
     // not supported yet
     #else
     #error("unsupported os")
