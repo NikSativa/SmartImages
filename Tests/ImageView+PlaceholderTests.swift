@@ -1,3 +1,4 @@
+#if !os(watchOS)
 import Foundation
 import NSpry
 import XCTest
@@ -10,13 +11,14 @@ final class ImageView_PlaceholderTests: XCTestCase {
         let subject = ImageView()
         XCTAssertNil(subject.image)
 
-        subject.setPlaceholder(.testMake(.five))
-        XCTAssertEqual(subject.image, .testMake(.five))
+        subject.setPlaceholder(.spry.testImage1)
+        XCTAssertEqual(subject.image, .spry.testImage1)
 
         subject.setPlaceholder()
         XCTAssertNil(subject.image)
 
-        subject.setPlaceholder(.testMake(.three))
-        XCTAssertEqual(subject.image, .testMake(.three))
+        subject.setPlaceholder(.spry.testImage2)
+        XCTAssertEqual(subject.image, .spry.testImage2)
     }
 }
+#endif

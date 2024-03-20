@@ -129,8 +129,8 @@ final class ImageDownloadQueueTests: XCTestCase {
             wait(for: expectations[ids], timeout: 0.1)
 
             prev = ids
-            started.values.forEach {
-                $0()
+            for value in started.values {
+                value()
             }
         } while fulfilled.count < 100
 

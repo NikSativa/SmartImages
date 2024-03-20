@@ -1,6 +1,14 @@
 import Combine
 import Foundation
 
+#if os(iOS) || os(tvOS) || os(visionOS) || os(watchOS)
+import UIKit
+#elseif os(macOS)
+import Cocoa
+#else
+#error("unsupported os")
+#endif
+
 public protocol ImageDownloading {
     func download(of info: ImageInfo,
                   for imageView: ImageView,
@@ -52,14 +60,14 @@ public extension ImageDownloading {
                   timeoutInterval: TimeInterval = 60,
                   processors: [ImageProcessor] = [],
                   priority: ImagePriority = .default,
-                  completion: @escaping ImageClosure = { _ in }) -> AnyCancellable {
+                  completion: ImageClosure? = nil) -> AnyCancellable {
         let info = ImageInfo(url: url,
                              cachePolicy: cachePolicy,
                              timeoutInterval: timeoutInterval,
                              processors: processors,
                              priority: priority)
         return download(of: info,
-                        completion: completion)
+                        completion: completion ?? { _ in })
     }
 
     func download(url: URL,
@@ -69,7 +77,7 @@ public extension ImageDownloading {
                   priority: ImagePriority = .default,
                   for imageView: ImageView,
                   animated animation: ImageAnimation? = nil,
-                  completion: @escaping ImageClosure = { _ in }) {
+                  completion: ImageClosure? = nil) {
         let info = ImageInfo(url: url,
                              cachePolicy: cachePolicy,
                              timeoutInterval: timeoutInterval,
@@ -78,7 +86,7 @@ public extension ImageDownloading {
         download(of: info,
                  for: imageView,
                  animated: animation,
-                 completion: completion)
+                 completion: completion ?? { _ in })
     }
 
     func predownload(of info: ImageInfo) {

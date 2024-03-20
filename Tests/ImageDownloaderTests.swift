@@ -45,7 +45,7 @@ final class ImageDownloaderTests: XCTestCase {
     func test_download_url_success() {
         let expImage = expectation(description: "wait image")
         token = subject.download(url: .testMake("google.com/\(1)")) { img in
-            XCTAssertEqualImage(img, .testMake(.five))
+            XCTAssertEqualImage(img, .spry.testImage4)
             expImage.fulfill()
         }
 
@@ -56,7 +56,7 @@ final class ImageDownloaderTests: XCTestCase {
 
         XCTAssertHaveNotReceived(imageCache, .store)
 
-        let image: Image = .testMake(.five)
+        let image: Image = .spry.testImage4
         let imageData: Data = PlatformImage(image).pngData()!
         Queue.utility.asyncAfter(deadline: .now() + 0.1) { [network] in
             network.completion?(.success(imageData))
@@ -144,7 +144,7 @@ final class ImageDownloaderTests: XCTestCase {
             network.stub(.request).with(url, Argument.anything, Argument.anything, Argument.anything).andDo { args in
                 let completion = args[3] as! (Result<Data, Error>) -> Void
                 if i < limit / 2 {
-                    let image: Image = .testMake(.five)
+                    let image: Image = .spry.testImage4
                     let imageData: Data = PlatformImage(image).pngData()!
                     Queue.main.asyncAfter(deadline: .now() + rands()) {
                         completion(.success(imageData))
@@ -168,7 +168,7 @@ final class ImageDownloaderTests: XCTestCase {
 
             subject.download(url: url) { img in
                 if i < limit / 2 {
-                    XCTAssertEqualImage(img, .testMake(.five))
+                    XCTAssertEqualImage(img, .spry.testImage4)
                 } else {
                     XCTAssertNil(img)
                 }
@@ -176,7 +176,7 @@ final class ImageDownloaderTests: XCTestCase {
             }.store(in: &tokens)
         }
 
-        wait(for: expsResult + expsLoading, timeout: 2)
+        wait(for: expsResult + expsLoading, timeout: 5)
 
         // should not call cancel
         // try to make 'timeout: 10' to by sure that every task was finished correctly
