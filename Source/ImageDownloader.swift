@@ -247,11 +247,13 @@ extension ImageDownloader: ImageDownloading {
     public func download(of info: ImageInfo,
                          for imageView: ImageView,
                          animated animation: ImageAnimation?,
+                         placeholder: ImagePlaceholder,
                          completion: @escaping ImageClosure) {
         guard needDownload(of: info, for: imageView) else {
             return
         }
 
+        imageView.setPlaceholder(placeholder)
         add(imageView, for: info.url, completion: completion)
         addInfoIfNeeded(info)
         scheduleDownload(of: info, animated: animation)

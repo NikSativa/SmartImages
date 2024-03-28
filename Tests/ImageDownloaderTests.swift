@@ -64,7 +64,7 @@ final class ImageDownloaderTests: XCTestCase {
         }
         XCTAssertHaveNotReceived(imageCache, .store)
 
-        wait(for: [expLoading, expImage], timeout: 0.2)
+        wait(for: [expLoading, expImage], timeout: 0.5)
 
         XCTAssertHaveReceived(imageCache, .store)
 

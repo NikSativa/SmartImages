@@ -17,17 +17,10 @@ public typealias ImageView = NSImageView
 import SwiftUI
 
 public typealias Image = UIImage
-
-public final class ImageView: View {
-    @State
-    var image: Image?
-
-    public var body: some View {
-        if let image {
-            SwiftUI.Image(uiImage: image)
-        }
-    }
+public protocol ImageView: AnyObject {
+    var image: Image? { get set }
 }
+
 #else
 #error("unsupported os")
 #endif
