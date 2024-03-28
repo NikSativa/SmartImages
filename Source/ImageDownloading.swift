@@ -15,6 +15,7 @@ public protocol ImageDownloading {
     func download(of info: ImageInfo,
                   for imageView: ImageView,
                   animated animation: ImageAnimation?,
+                  placeholder: ImagePlaceholder,
                   completion: @escaping ImageClosure)
 
     func download(of info: ImageInfo,
@@ -32,28 +33,34 @@ public extension ImageDownloading {
     }
 
     func download(of info: ImageInfo,
-                  for imageView: ImageView) {
+                  for imageView: ImageView,
+                  placeholder: ImagePlaceholder = .none) {
         download(of: info,
                  for: imageView,
                  animated: nil,
+                 placeholder: placeholder,
                  completion: { _ in })
     }
 
     func download(of info: ImageInfo,
                   for imageView: ImageView,
-                  animated animation: ImageAnimation) {
+                  animated animation: ImageAnimation,
+                  placeholder: ImagePlaceholder = .none) {
         download(of: info,
                  for: imageView,
                  animated: animation,
+                 placeholder: placeholder,
                  completion: { _ in })
     }
 
     func download(of info: ImageInfo,
                   for imageView: ImageView,
+                  placeholder: ImagePlaceholder = .none,
                   completion: @escaping ImageClosure) {
         download(of: info,
                  for: imageView,
                  animated: nil,
+                 placeholder: placeholder,
                  completion: completion)
     }
 
@@ -79,6 +86,7 @@ public extension ImageDownloading {
                   priority: ImagePriority = .default,
                   for imageView: ImageView,
                   animated animation: ImageAnimation? = nil,
+                  placeholder: ImagePlaceholder = .none,
                   completion: ImageClosure? = nil) {
         let info = ImageInfo(url: url,
                              cachePolicy: cachePolicy,
@@ -88,6 +96,7 @@ public extension ImageDownloading {
         download(of: info,
                  for: imageView,
                  animated: animation,
+                 placeholder: placeholder,
                  completion: completion ?? { _ in })
     }
 

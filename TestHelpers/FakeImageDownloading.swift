@@ -27,6 +27,7 @@ public final class FakeImageDownloading: ImageDownloading, Spryable {
     public func download(of info: ImageInfo,
                          for imageView: ImageView,
                          animated animation: ImageAnimation?,
+                         placeholder: ImagePlaceholder,
                          completion: @escaping ImageClosure) {
         self.completion = completion
         return spryify(arguments: info, imageView, animation, completion)

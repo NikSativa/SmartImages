@@ -5,7 +5,7 @@ import XCTest
 @testable import NImageDownloader
 @testable import NImageDownloaderTestHelpers
 
-final class UIImage_NetworkTests: XCTestCase {
+final class Image_NetworkTests: XCTestCase {
     func test_sourceURL() {
         let subject = Image()
         XCTAssertNil(subject.sourceURL)
