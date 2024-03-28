@@ -1,7 +1,7 @@
 import Foundation
 import NQueue
 
-internal protocol ImageCaching {
+public protocol ImageCaching {
     func cached(for key: URL) -> Data?
     func store(_ data: Data, for key: URL)
     func remove(for key: URL)

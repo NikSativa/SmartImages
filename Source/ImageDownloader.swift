@@ -20,24 +20,39 @@ public final class ImageDownloader {
     }
 
     private let mutex: Mutexing = Mutex.pthread(.recursive)
-    private let decodingQueue: Queueable = Queue.custom(label: "ImageDownloader.decodingQueue",
-                                                        qos: .utility,
-                                                        attributes: .concurrent)
-    private let mainQueue: Queueable = Queue.custom(label: "ImageDownloader.mainQueue",
-                                                    qos: .utility,
-                                                    attributes: .serial)
-
+    private let decodingQueue: DelayedQueue
     private var cacheViews: [URL: WeakViews] = [:]
     private var cacheClosures: [URL: [ClosureToken]] = [:]
     private var cacheInfos: [URL: ImageInfo] = [:]
     private var cacheActiveTasks: [URL: any Cancellable] = [:]
 
     private let network: ImageDownloaderNetwork
-    private let imageCache: ImageCaching?
     private let imageDecoding: ImageDecodingProcessor
     private let downloadQueue: ImageDownloadQueueing
+    public let imageCache: ImageCaching?
 
+    /// ImageDownloader factory method
+    /// - network — Use it to adapt any custom network, ex. URLSession
+    /// - cache — The ImageCacheInfo is configuration for URLCache which implements the caching of responses to URL load requests
+    /// - decoders — Custom decoding, ex. WebP
+    /// - decodingQueue — Queue for decoding
+    /// - concurrentImagesLimit — Number of concurrent image download tasks
+    public static func create(network: ImageDownloaderNetwork,
+                              cache: ImageCacheInfo? = nil,
+                              decoders: [ImageDecoding] = [ImageDecoders.Default()],
+                              decodingQueue: DelayedQueue = .absent,
+                              concurrentImagesLimit limit: Int? = nil) -> ImageDownloading {
+        let imageCache: ImageCache? = cache.map(ImageCache.init(info:))
+        return Self(network: network,
+                    decodingQueue: decodingQueue,
+                    imageCache: imageCache,
+                    imageDecoding: ImageDecodingProcessor(decoders: decoders),
+                    downloadQueue: ImageDownloadQueue(concurrentImagesLimit: limit))
+    }
+
+    /// testable initializer
     internal init(network: ImageDownloaderNetwork,
+                  decodingQueue: DelayedQueue,
                   imageCache: ImageCaching? = nil,
                   imageDecoding: ImageDecodingProcessor,
                   downloadQueue: ImageDownloadQueueing) {
@@ -45,17 +60,7 @@ public final class ImageDownloader {
         self.imageCache = imageCache
         self.imageDecoding = imageDecoding
         self.downloadQueue = downloadQueue
-    }
-
-    public static func create(network: ImageDownloaderNetwork,
-                              cache: ImageCacheInfo? = nil,
-                              decoders: [ImageDecoding] = [ImageDecoders.Default()],
-                              concurrentImagesLimit limit: Int? = nil) -> ImageDownloader {
-        let imageCache: ImageCache? = cache.map(ImageCache.init(info:))
-        return .init(network: network,
-                     imageCache: imageCache,
-                     imageDecoding: ImageDecodingProcessor(decoders: decoders),
-                     downloadQueue: ImageDownloadQueue(concurrentImagesLimit: limit))
+        self.decodingQueue = decodingQueue
     }
 
     private func add(_ imageView: ImageView, for url: URL, completion: @escaping ImageClosure) {
@@ -101,7 +106,7 @@ public final class ImageDownloader {
     private func checkCachedImage(for info: ImageInfo,
                                   animated animation: ImageAnimation?) -> Bool {
         if let data = imageCache?.cached(for: info.url) {
-            decodingQueue.async { [self] in
+            decodingQueue.fire { [self] in
                 handleLoaded(.success(data), animated: animation, for: info.url)
             }
             return true
@@ -150,7 +155,7 @@ public final class ImageDownloader {
                 }
 
                 completion()
-                decodingQueue.async { [self] in
+                decodingQueue.fire { [self] in
                     handleLoaded(result, animated: animation, for: url)
                 }
             }
@@ -165,8 +170,6 @@ public final class ImageDownloader {
     private func handleLoaded(_ result: Result<Data, Error>,
                               animated animation: ImageAnimation?,
                               for url: URL) {
-        assert(!Thread.isMainThread)
-
         let (info, views, closures) = mutex.sync {
             defer {
                 cacheInfos[url] = nil
@@ -213,7 +216,7 @@ public final class ImageDownloader {
                         animated animation: ImageAnimation?,
                         views: [WeakViews.InstanceStub],
                         closures: [ImageClosure]) {
-        Queue.main.async {
+        Queue.main.sync {
             for cached in views {
                 if let view = cached.view {
                     animation.animate(view, image: image)
@@ -267,26 +270,22 @@ extension ImageDownloader: ImageDownloading {
                 return
             }
 
-            mutex.sync { [weak self] in
-                guard let self else {
-                    return
-                }
-
-                var arr = cacheClosures[url] ?? []
+            mutex.sync { [uniq, url] in
+                var arr = self.cacheClosures[url] ?? []
                 arr = arr.filter {
                     return uniq !== $0
                 }
 
                 if arr.isEmpty {
-                    cacheClosures[url] = nil
+                    self.cacheClosures[url] = nil
 
-                    if cacheViews[url] == nil {
-                        cacheInfos[url] = nil
-                        cacheActiveTasks[url]?.cancel()
-                        cacheActiveTasks[url] = nil
+                    if self.cacheViews[url] == nil {
+                        self.cacheInfos[url] = nil
+                        self.cacheActiveTasks[url]?.cancel()
+                        self.cacheActiveTasks[url] = nil
                     }
                 } else {
-                    cacheClosures[url] = arr
+                    self.cacheClosures[url] = arr
                 }
             }
         }

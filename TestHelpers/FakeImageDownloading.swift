@@ -10,6 +10,7 @@ public final class FakeImageDownloading: ImageDownloading, Spryable {
     }
 
     public enum Function: String, StringRepresentable {
+        case imageCache
         case downloadView = "download(of:for:animated:completion:)"
         case downloadInfo = "download(of:completion:)"
         case predownload = "predownload(of:completion:)"
@@ -17,6 +18,10 @@ public final class FakeImageDownloading: ImageDownloading, Spryable {
     }
 
     public init() {}
+
+    public var imageCache: ImageCaching? {
+        return spryify()
+    }
 
     public var completion: ImageClosure?
     public func download(of info: ImageInfo,
