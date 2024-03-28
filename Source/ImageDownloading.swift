@@ -10,6 +10,8 @@ import Cocoa
 #endif
 
 public protocol ImageDownloading {
+    var imageCache: ImageCaching? { get }
+
     func download(of info: ImageInfo,
                   for imageView: ImageView,
                   animated animation: ImageAnimation?,

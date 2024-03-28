@@ -37,6 +37,7 @@ final class ImageDownloaderTests: XCTestCase {
     }()
 
     private lazy var subject = ImageDownloader(network: network,
+                                               decodingQueue: .async(Queue.background),
                                                imageCache: imageCache,
                                                imageDecoding: imageDecoding,
                                                downloadQueue: downloadQueue)
@@ -103,8 +104,8 @@ final class ImageDownloaderTests: XCTestCase {
     func test_create() {
         let network = FakeImageDownloaderNetwork()
         let cache = ImageCacheInfo(folderName: "ImageDownloaderTests.ImageCacheInfo.folderName")
-        let subject: ImageDownloader? = ImageDownloader.create(network: network,
-                                                               cache: cache)
+        let subject: ImageDownloading? = ImageDownloader.create(network: network,
+                                                                cache: cache)
         XCTAssertNotNil(subject)
     }
 
@@ -114,9 +115,9 @@ final class ImageDownloaderTests: XCTestCase {
         }
 
         let network = FakeImageDownloaderNetwork()
-        let subject: ImageDownloader = .create(network: network,
-                                               cache: nil,
-                                               concurrentImagesLimit: 10)
+        let subject: ImageDownloading = ImageDownloader.create(network: network,
+                                                               cache: nil,
+                                                               concurrentImagesLimit: 10)
 
         let limit = 100
         var tokens: Set<AnyCancellable> = []
@@ -176,7 +177,7 @@ final class ImageDownloaderTests: XCTestCase {
             }.store(in: &tokens)
         }
 
-        wait(for: expsResult + expsLoading, timeout: 5)
+        wait(for: expsResult + expsLoading, timeout: 10)
 
         // should not call cancel
         // try to make 'timeout: 10' to by sure that every task was finished correctly

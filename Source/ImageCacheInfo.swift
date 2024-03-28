@@ -50,6 +50,6 @@ private extension Int? {
         if let self, self > 10 * 1024 * 1024 {
             return self
         }
-        return 400 * 1024 * 1024 // 40MB
+        return 400 * 1024 * 1024 // 400MB
     }
 }
