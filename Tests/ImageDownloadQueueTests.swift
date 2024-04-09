@@ -1,11 +1,11 @@
 import Foundation
-import NQueue
-import NSpry
+import Threading
+import SpryKit
 import XCTest
 
-@testable import NImageDownloader
-@testable import NImageDownloaderTestHelpers
-@testable import NQueueTestHelpers
+@testable import FastImages
+@testable import FastImagesTestHelpers
+@testable import ThreadingTestHelpers
 
 final class ImageDownloadQueueTests: XCTestCase {
     func test_unlimited() {
@@ -18,7 +18,7 @@ final class ImageDownloadQueueTests: XCTestCase {
         }
 
         let subject = ImageDownloadQueue(concurrentImagesLimit: nil,
-                                         operationQueue: queue)
+                                         operatioThreading: queue)
         var started: [Int] = []
 
         for i in 0..<100 {
@@ -44,7 +44,7 @@ final class ImageDownloadQueueTests: XCTestCase {
         }
 
         let subject = ImageDownloadQueue(concurrentImagesLimit: limit,
-                                         operationQueue: queue)
+                                         operatioThreading: queue)
         var started: [Int: VoidClosure] = [:]
 
         for i in 0..<100 {
@@ -94,7 +94,7 @@ final class ImageDownloadQueueTests: XCTestCase {
     func test_real_queue() {
         let limit = 5
         let subject = ImageDownloadQueue(concurrentImagesLimit: limit,
-                                         operationQueue: nil)
+                                         operatioThreading: nil)
         var started: [Int: VoidClosure] = [:]
         var expectations: [Int: XCTestExpectation] = [:]
         var fulfilled: Set<Int> = []

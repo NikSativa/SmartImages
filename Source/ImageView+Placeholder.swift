@@ -1,7 +1,7 @@
 import Foundation
 
 import Foundation
-import NQueue
+import Threading
 
 #if os(iOS) || os(tvOS) || os(visionOS) || os(watchOS)
 import UIKit

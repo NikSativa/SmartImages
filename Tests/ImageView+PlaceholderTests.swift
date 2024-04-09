@@ -1,7 +1,7 @@
 import Foundation
-import NImageDownloader
-import NImageDownloaderTestHelpers
-import NSpry
+import FastImages
+import FastImagesTestHelpers
+import SpryKit
 import XCTest
 
 final class ImageView_PlaceholderTests: XCTestCase {
@@ -34,7 +34,7 @@ final class ImageView_PlaceholderTests: XCTestCase {
 }
 
 #if os(watchOS)
-private final class ImageView: NImageDownloader.ImageView {
+private final class ImageView: FastImages.ImageView {
     var image: Image?
 }
 #endif

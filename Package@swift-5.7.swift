@@ -3,7 +3,7 @@
 import PackageDescription
 
 let package = Package(
-    name: "NImageDownloader",
+    name: "FastImages",
     platforms: [
         .iOS(.v13),
         .macOS(.v11),
@@ -12,38 +12,38 @@ let package = Package(
         .watchOS(.v6)
     ],
     products: [
-        .library(name: "NImageDownloader", targets: ["NImageDownloader"]),
-        .library(name: "NImageDownloaderTestHelpers", targets: ["NImageDownloaderTestHelpers"])
+        .library(name: "FastImages", targets: ["FastImages"]),
+        .library(name: "FastImagesTestHelpers", targets: ["FastImagesTestHelpers"])
     ],
     dependencies: [
-        .package(url: "https://github.com/NikSativa/NQueue.git", .upToNextMajor(from: "1.2.4")),
-        .package(url: "https://github.com/NikSativa/NSpry.git", .upToNextMajor(from: "2.1.4"))
+        .package(url: "https://github.com/NikSativa/Threading.git", .upToNextMajor(from: "1.2.4")),
+        .package(url: "https://github.com/NikSativa/SpryKit.git", .upToNextMajor(from: "2.1.4"))
     ],
     targets: [
-        .target(name: "NImageDownloader",
+        .target(name: "FastImages",
                 dependencies: [
-                    "NQueue"
+                    "Threading"
                 ],
                 path: "Source",
                 resources: [
                     .copy("../PrivacyInfo.xcprivacy")
                 ]),
-        .target(name: "NImageDownloaderTestHelpers",
+        .target(name: "FastImagesTestHelpers",
                 dependencies: [
-                    "NSpry",
-                    "NImageDownloader"
+                    "SpryKit",
+                    "FastImages"
                 ],
                 path: "TestHelpers",
                 resources: [
                     .copy("../PrivacyInfo.xcprivacy")
                 ]),
-        .testTarget(name: "NImageDownloaderTests",
+        .testTarget(name: "FastImagesTests",
                     dependencies: [
-                        "NImageDownloader",
-                        "NImageDownloaderTestHelpers",
-                        "NSpry",
-                        "NQueue",
-                        .product(name: "NQueueTestHelpers", package: "NQueue")
+                        "FastImages",
+                        "FastImagesTestHelpers",
+                        "SpryKit",
+                        "Threading",
+                        .product(name: "ThreadingTestHelpers", package: "Threading")
                     ],
                     path: "Tests",
                     resources: [
