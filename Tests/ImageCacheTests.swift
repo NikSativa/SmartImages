@@ -1,9 +1,9 @@
 import Foundation
-import NSpry
+import SpryKit
 import XCTest
 
-@testable import NImageDownloader
-@testable import NImageDownloaderTestHelpers
+@testable import FastImages
+@testable import FastImagesTestHelpers
 
 final class ImageCacheTests: XCTestCase {
     func test_should_create_url_cache_with_correct_memory_usage() {

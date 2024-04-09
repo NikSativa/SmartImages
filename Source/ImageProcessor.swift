@@ -1,5 +1,5 @@
 import Foundation
-import NQueue
+import Threading
 
 public protocol ImageProcessor {
     func process(_ image: Image) -> Image

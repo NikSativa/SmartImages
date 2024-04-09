@@ -1,7 +1,7 @@
 import Foundation
-import NSpry
+import SpryKit
 
-@testable import NImageDownloader
+@testable import FastImages
 
 extension Data {
     static func testMake(image: Image = .spry.testImage) -> Self {

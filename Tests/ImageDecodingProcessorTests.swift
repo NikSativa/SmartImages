@@ -1,9 +1,9 @@
 import Foundation
-import NSpry
+import SpryKit
 import XCTest
 
-@testable import NImageDownloader
-@testable import NImageDownloaderTestHelpers
+@testable import FastImages
+@testable import FastImagesTestHelpers
 
 final class ImageDecodingProcessorTests: XCTestCase {
     private let pngData: Data! = PlatformImage(.spry.testImage4).pngData()

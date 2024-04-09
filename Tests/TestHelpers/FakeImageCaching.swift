@@ -1,7 +1,7 @@
 import Foundation
-import NSpry
+import SpryKit
 
-@testable import NImageDownloader
+@testable import FastImages
 
 final class FakeImageCaching: ImageCaching, Spryable {
     enum ClassFunction: String, StringRepresentable {

@@ -1,5 +1,5 @@
 import Foundation
-import NQueue
+import Threading
 
 public protocol ImageCaching {
     func cached(for key: URL) -> Data?

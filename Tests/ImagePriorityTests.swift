@@ -1,9 +1,9 @@
 import Foundation
-import NSpry
+import SpryKit
 import XCTest
 
-@testable import NImageDownloader
-@testable import NImageDownloaderTestHelpers
+@testable import FastImages
+@testable import FastImagesTestHelpers
 
 final class ImagePriorityTests: XCTestCase {
     func test_priority() {

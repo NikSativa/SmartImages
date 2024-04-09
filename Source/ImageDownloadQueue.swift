@@ -1,5 +1,5 @@
 import Foundation
-import NQueue
+import Threading
 
 internal enum ImageDownloadQueuePriority: Comparable {
     case preset(ImagePriority)
@@ -16,7 +16,7 @@ internal final class ImageDownloadQueue {
     typealias Priority = ImageDownloadQueuePriority
 
     private let mutex: Mutexing = Mutex.pthread(.recursive)
-    private let operationQueue: Queueable
+    private let operatioThreading: Queueable
 
     private var scheduledOperations: [Operation] = []
     private var runningOperations: [Operation] = []
@@ -24,8 +24,8 @@ internal final class ImageDownloadQueue {
     private var isScheduled: Bool = false
 
     init(concurrentImagesLimit limit: Int?,
-         operationQueue: Queueable? = nil) {
-        self.operationQueue = operationQueue ?? Queue.custom(label: "ImageDownloadQueue.Operation",
+         operatioThreading: Queueable? = nil) {
+        self.operatioThreading = operatioThreading ?? Queue.custom(label: "ImageDownloadQueue.Operation",
                                                              qos: .utility,
                                                              attributes: .serial)
         self.maxConcurrentOperationCount = limit.map {
@@ -41,7 +41,7 @@ internal final class ImageDownloadQueue {
             isScheduled = true
         }
 
-        operationQueue.async { [weak self] in
+        operatioThreading.async { [weak self] in
             self?.checkQueue()
 
             self?.mutex.sync {
@@ -66,7 +66,7 @@ internal final class ImageDownloadQueue {
                 let operation = operations.removeFirst()
                 runningOperations.append(operation)
                 operation.starter { [self] in
-                    operationQueue.async { [self] in
+                    operatioThreading.async { [self] in
                         operationDidFinished(operation)
                     }
                 }

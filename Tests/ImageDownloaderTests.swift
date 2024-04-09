@@ -1,12 +1,12 @@
 import Combine
 import Foundation
-import NQueue
-import NSpry
+import Threading
+import SpryKit
 import XCTest
 
-@testable import NImageDownloader
-@testable import NImageDownloaderTestHelpers
-@testable import NQueueTestHelpers
+@testable import FastImages
+@testable import FastImagesTestHelpers
+@testable import ThreadingTestHelpers
 
 final class ImageDownloaderTests: XCTestCase {
     private lazy var task: FakeImageDownloaderTask = {

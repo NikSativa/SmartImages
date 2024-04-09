@@ -1,9 +1,9 @@
 import Foundation
-import NSpry
+import SpryKit
 import XCTest
 
-@testable import NImageDownloader
-@testable import NImageDownloaderTestHelpers
+@testable import FastImages
+@testable import FastImagesTestHelpers
 
 final class ImageDecoders_DefaultTests: XCTestCase {
     func test_should_not_create_image_from_empty_Data() {

@@ -1,8 +1,8 @@
 import Combine
 import Foundation
-import NSpry
+import SpryKit
 
-@testable import NImageDownloader
+@testable import FastImages
 
 public final class FakeImageDownloading: ImageDownloading, Spryable {
     public enum ClassFunction: String, StringRepresentable {
