@@ -1,7 +1,7 @@
 import Foundation
 import SpryKit
 
-@testable import FastImages
+@testable import SmartImages
 
 extension Data {
     static func testMake(image: Image = .spry.testImage) -> Self {

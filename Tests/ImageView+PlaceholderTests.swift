@@ -1,6 +1,6 @@
 import Foundation
-import FastImages
-import FastImagesTestHelpers
+import SmartImages
+import SmartImagesTestHelpers
 import SpryKit
 import XCTest
 
@@ -34,7 +34,7 @@ final class ImageView_PlaceholderTests: XCTestCase {
 }
 
 #if os(watchOS)
-private final class ImageView: FastImages.ImageView {
+private final class ImageView: SmartImages.ImageView {
     var image: Image?
 }
 #endif

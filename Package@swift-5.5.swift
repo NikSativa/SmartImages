@@ -3,7 +3,7 @@
 import PackageDescription
 
 let package = Package(
-    name: "FastImages",
+    name: "SmartImages",
     platforms: [
         .iOS(.v13),
         .macOS(.v11),
@@ -12,15 +12,15 @@ let package = Package(
         .watchOS(.v6)
     ],
     products: [
-        .library(name: "FastImages", targets: ["FastImages"]),
-        .library(name: "FastImagesTestHelpers", targets: ["FastImagesTestHelpers"])
+        .library(name: "SmartImages", targets: ["SmartImages"]),
+        .library(name: "SmartImagesTestHelpers", targets: ["SmartImagesTestHelpers"])
     ],
     dependencies: [
         .package(url: "https://github.com/NikSativa/Threading.git", .upToNextMajor(from: "1.2.4")),
         .package(url: "https://github.com/NikSativa/SpryKit.git", .upToNextMajor(from: "2.1.4"))
     ],
     targets: [
-        .target(name: "FastImages",
+        .target(name: "SmartImages",
                 dependencies: [
                     "Threading"
                 ],
@@ -28,19 +28,19 @@ let package = Package(
                 resources: [
                     .copy("../PrivacyInfo.xcprivacy")
                 ]),
-        .target(name: "FastImagesTestHelpers",
+        .target(name: "SmartImagesTestHelpers",
                 dependencies: [
                     "SpryKit",
-                    "FastImages"
+                    "SmartImages"
                 ],
                 path: "TestHelpers",
                 resources: [
                     .copy("../PrivacyInfo.xcprivacy")
                 ]),
-        .testTarget(name: "FastImagesTests",
+        .testTarget(name: "SmartImagesTests",
                     dependencies: [
-                        "FastImages",
-                        "FastImagesTestHelpers",
+                        "SmartImages",
+                        "SmartImagesTestHelpers",
                         "SpryKit",
                         "Threading",
                         .product(name: "ThreadingTestHelpers", package: "Threading")

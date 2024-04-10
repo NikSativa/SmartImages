@@ -1,8 +1,7 @@
 import Combine
 import Foundation
+import SmartImages
 import SpryKit
-
-@testable import FastImages
 
 public final class FakeImageDownloading: ImageDownloading, Spryable {
     public enum ClassFunction: String, StringRepresentable {

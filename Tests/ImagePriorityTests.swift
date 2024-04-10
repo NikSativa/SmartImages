@@ -1,9 +1,7 @@
 import Foundation
+import SmartImages
 import SpryKit
 import XCTest
-
-@testable import FastImages
-@testable import FastImagesTestHelpers
 
 final class ImagePriorityTests: XCTestCase {
     func test_priority() {

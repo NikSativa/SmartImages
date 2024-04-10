@@ -1,9 +1,8 @@
 import Foundation
+import SmartImages
+import SmartImagesTestHelpers
 import SpryKit
 import XCTest
-
-@testable import FastImages
-@testable import FastImagesTestHelpers
 
 final class ImageProcessors_CompositionTests: XCTestCase {
     func test_2_processors() {

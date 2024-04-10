@@ -1,9 +1,8 @@
 import Foundation
+import SmartImages
+import SmartImagesTestHelpers
 import SpryKit
 import XCTest
-
-@testable import FastImages
-@testable import FastImagesTestHelpers
 
 final class ImageCacheInfoTests: XCTestCase {
     func test_create_with_file_manager() {

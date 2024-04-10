@@ -2,8 +2,7 @@ import Foundation
 import SpryKit
 import XCTest
 
-@testable import FastImages
-@testable import FastImagesTestHelpers
+@testable import SmartImages
 
 final class URLRequest_CachePolicy_NetworkTests: XCTestCase {
     func test_canUseCachedData() {
