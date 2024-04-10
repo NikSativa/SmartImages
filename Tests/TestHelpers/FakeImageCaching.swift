@@ -1,7 +1,6 @@
 import Foundation
+import SmartImages
 import SpryKit
-
-@testable import FastImages
 
 final class FakeImageCaching: ImageCaching, Spryable {
     enum ClassFunction: String, StringRepresentable {

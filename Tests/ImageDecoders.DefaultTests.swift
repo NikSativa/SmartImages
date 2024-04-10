@@ -2,8 +2,7 @@ import Foundation
 import SpryKit
 import XCTest
 
-@testable import FastImages
-@testable import FastImagesTestHelpers
+@testable import SmartImages
 
 final class ImageDecoders_DefaultTests: XCTestCase {
     func test_should_not_create_image_from_empty_Data() {

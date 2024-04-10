@@ -1,12 +1,11 @@
 import Combine
 import Foundation
-import Threading
+import SmartImagesTestHelpers
 import SpryKit
+import Threading
 import XCTest
 
-@testable import FastImages
-@testable import FastImagesTestHelpers
-@testable import ThreadingTestHelpers
+@testable import SmartImages
 
 final class ImageDownloaderTests: XCTestCase {
     private lazy var task: FakeImageDownloaderTask = {

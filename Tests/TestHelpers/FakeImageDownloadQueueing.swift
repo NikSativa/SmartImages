@@ -1,7 +1,7 @@
 import Foundation
 import SpryKit
 
-@testable import FastImages
+@testable import SmartImages
 
 final class FakeImageDownloadQueueing: ImageDownloadQueueing, Spryable {
     enum ClassFunction: String, StringRepresentable {

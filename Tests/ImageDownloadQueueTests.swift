@@ -1,11 +1,11 @@
 import Foundation
-import Threading
+import SmartImagesTestHelpers
 import SpryKit
+import Threading
+import ThreadingTestHelpers
 import XCTest
 
-@testable import FastImages
-@testable import FastImagesTestHelpers
-@testable import ThreadingTestHelpers
+@testable import SmartImages
 
 final class ImageDownloadQueueTests: XCTestCase {
     func test_unlimited() {

@@ -2,8 +2,7 @@ import Foundation
 import SpryKit
 import XCTest
 
-@testable import FastImages
-@testable import FastImagesTestHelpers
+@testable import SmartImages
 
 final class Image_NetworkTests: XCTestCase {
     func test_sourceURL() {

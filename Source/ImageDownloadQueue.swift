@@ -26,8 +26,8 @@ internal final class ImageDownloadQueue {
     init(concurrentImagesLimit limit: Int?,
          operatioThreading: Queueable? = nil) {
         self.operatioThreading = operatioThreading ?? Queue.custom(label: "ImageDownloadQueue.Operation",
-                                                             qos: .utility,
-                                                             attributes: .serial)
+                                                                   qos: .utility,
+                                                                   attributes: .serial)
         self.maxConcurrentOperationCount = limit.map {
             return max($0, 1)
         } ?? .max

@@ -2,8 +2,7 @@ import Foundation
 import SpryKit
 import XCTest
 
-@testable import FastImages
-@testable import FastImagesTestHelpers
+@testable import SmartImages
 
 final class ImageCacheTests: XCTestCase {
     func test_should_create_url_cache_with_correct_memory_usage() {
