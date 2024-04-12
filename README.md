@@ -1,4 +1,6 @@
 # SmartImages
+[![](https://img.shields.io/endpoint?url=https%3A%2F%2Fswiftpackageindex.com%2Fapi%2Fpackages%2FNikSativa%2FSmartImages%2Fbadge%3Ftype%3Dswift-versions)](https://swiftpackageindex.com/NikSativa/SmartImages)
+[![](https://img.shields.io/endpoint?url=https%3A%2F%2Fswiftpackageindex.com%2Fapi%2Fpackages%2FNikSativa%2FSmartImages%2Fbadge%3Ftype%3Dplatforms)](https://swiftpackageindex.com/NikSativa/SmartImages)
 
 Simple and lightweight library for loading images in a fast way, because it prioritizes queuing and loading images in the order they are requested and/or if ImageView is waiting for an image to be loaded, it will be prioritized over the others. 
 It uses the native Image object to load images and provides a way to cache them in memory and you can also set a custom cache size.
