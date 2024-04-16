@@ -29,14 +29,14 @@ planeImageView.setImage(withURL: url)
 implementation:
 ```swift
 import Foundation
-import NImageDownloader
+import SmartImages
 import UIKit
 
 public enum ImageDownloader {
     private static let imageDownloader: ImageDownloading = {
-        return NImageDownloader.ImageDownloader.create(network: ImageDownloaderNetworkAdaptor(),
-                                                       cache: .init(folderName: "DownloadedImages"),
-                                                       concurrentImagesLimit: 8)
+        return SmartImages.ImageDownloader.create(network: ImageDownloaderNetworkAdaptor(),
+                                                  cache: .init(folderName: "DownloadedImages"),
+                                                  concurrentImagesLimit: 8)
     }()
 
     public init() {}
