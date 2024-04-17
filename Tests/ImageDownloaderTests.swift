@@ -142,6 +142,7 @@ final class ImageDownloaderTests: XCTestCase {
             expsLoading.append(expLoading)
 
             network.stub(.request).with(url, Argument.anything, Argument.anything, Argument.anything).andDo { args in
+                // swiftformat:disable:next all
                 let completion = args[3] as! (Result<Data, Error>) -> Void
                 if i < limit / 2 {
                     let image: Image = .spry.testImage4
