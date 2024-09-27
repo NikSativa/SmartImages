@@ -19,3 +19,7 @@ public struct ImageInfo {
         self.priority = priority
     }
 }
+
+#if swift(>=6.0)
+extension ImageInfo: Sendable {}
+#endif

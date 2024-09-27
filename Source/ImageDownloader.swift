@@ -2,7 +2,7 @@ import Combine
 import Foundation
 import Threading
 
-#if os(iOS) || os(tvOS) || os(watchOS) || os(visionOS)
+#if os(iOS) || os(tvOS) || os(watchOS) || supportsVisionOS
 import UIKit
 #elseif os(macOS)
 import Cocoa
@@ -121,7 +121,7 @@ public final class ImageDownloader {
         }
 
         let url = info.url
-        let prioritizer: () -> ImageDownloadQueuePriority = { [weak self] in
+        let prioritizer: ImageDownloadQueueing.Prioritizer = { [weak self] in
             guard let self else {
                 return .preset(info.priority)
             }
@@ -216,7 +216,12 @@ public final class ImageDownloader {
                         animated animation: ImageAnimation?,
                         views: [WeakViews.InstanceStub],
                         closures: [ImageClosure]) {
-        Queue.main.sync {
+        let sendableImage = UnSendable(value: image)
+        let sendableClosures = UnSendable(value: closures)
+        Queue.isolatedMain.sync {
+            let image = sendableImage.value
+            let closures = sendableClosures.value
+
             for cached in views {
                 if let view = cached.view {
                     animation.animate(view, image: image)
@@ -230,14 +235,16 @@ public final class ImageDownloader {
         }
     }
 
-    private func needDownload(of info: ImageInfo, for imageView: ImageView) -> Bool {
-        if info.cachePolicy.canUseCachedData,
-           let image = imageView.image,
-           let currentSourceURL = image.sourceURL,
-           currentSourceURL == info.url {
-            return false
+    private func needDownload(of info: ImageInfo, for imageView: UnSendable<ImageView>) -> Bool {
+        return Queue.isolatedMain.sync {
+            if info.cachePolicy.canUseCachedData,
+               let image = imageView.value.image,
+               let currentSourceURL = image.sourceURL,
+               currentSourceURL == info.url {
+                return false
+            }
+            return true
         }
-        return true
     }
 }
 
@@ -249,11 +256,16 @@ extension ImageDownloader: ImageDownloading {
                          animated animation: ImageAnimation?,
                          placeholder: ImagePlaceholder,
                          completion: @escaping ImageClosure) {
-        guard needDownload(of: info, for: imageView) else {
+        let unsafeImageView: UnSendable<ImageView> = .init(imageView)
+
+        guard needDownload(of: info, for: unsafeImageView) else {
             return
         }
 
-        imageView.setPlaceholder(placeholder)
+        Queue.isolatedMain.sync {
+            unsafeImageView.value.setPlaceholder(placeholder)
+        }
+
         add(imageView, for: info.url, completion: completion)
         addInfoIfNeeded(info)
         scheduleDownload(of: info, animated: animation)
@@ -312,13 +324,15 @@ extension ImageDownloader: ImageDownloading {
 }
 
 private extension ImageAnimation? {
+    #if swift(>=6.0)
+    @MainActor
+    #endif
     func animate(_ imageView: ImageView, image: Image?) {
         // ignore nil, to leave placeholder
         guard let image else {
             return
         }
 
-        assert(Thread.isMainThread)
         switch self {
         #if os(iOS) || os(tvOS)
         case .crossDissolve:
@@ -334,7 +348,7 @@ private extension ImageAnimation? {
                               animations: {
                                   imageView.image = image
                               })
-        #elseif os(macOS) || os(watchOS) || os(visionOS)
+        #elseif os(macOS) || os(watchOS) || supportsVisionOS
         // not supported yet
         #else
             #error("unsupported os")
@@ -389,3 +403,17 @@ private final class WeakViews {
         }
     }
 }
+
+private extension ImageView {
+    var unsendableImage: UnSendable<Image?> {
+        return .init(value: image)
+    }
+}
+
+#if swift(>=6.0)
+extension ImageDownloader: @unchecked Sendable {}
+
+extension WeakViews: @unchecked Sendable {}
+extension WeakViews.Stub: @unchecked Sendable {}
+extension WeakViews.InstanceStub: Sendable {}
+#endif

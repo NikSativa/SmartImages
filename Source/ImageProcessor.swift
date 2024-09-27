@@ -1,11 +1,17 @@
 import Foundation
 import Threading
 
+#if swift(>=6.0)
+public protocol ImageProcessor: Sendable {
+    func process(_ image: Image) -> Image
+}
+#else
 public protocol ImageProcessor {
     func process(_ image: Image) -> Image
 }
+#endif
 
-/// can be used as namespace for any ImageProcessor declared in any other place of app
+/// Namespace for any ImageProcessor declared in any other place of app
 public enum ImageProcessors {}
 
 // MARK: - ImageProcessors.Composition

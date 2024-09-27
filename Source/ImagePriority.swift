@@ -10,3 +10,7 @@ public enum ImagePriority: Comparable {
     public static let `default`: Self = .normal
     public static let prefetch: Self = .veryLow
 }
+
+#if swift(>=6.0)
+extension ImagePriority: Sendable {}
+#endif

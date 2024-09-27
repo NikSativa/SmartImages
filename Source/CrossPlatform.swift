@@ -1,9 +1,15 @@
 import Foundation
+import Threading
 
+#if swift(>=6.0)
+internal typealias VoidClosure = @Sendable () -> Void
+public typealias ImageClosure = @Sendable (Image?) -> Void
+#else
 internal typealias VoidClosure = () -> Void
 public typealias ImageClosure = (Image?) -> Void
+#endif
 
-#if os(iOS) || os(tvOS) || os(visionOS)
+#if os(iOS) || os(tvOS) || supportsVisionOS
 import UIKit
 
 public typealias Image = UIImage
@@ -27,7 +33,7 @@ public protocol ImageView: AnyObject {
 
 #if os(iOS) || os(tvOS)
 private enum Screen {
-    static var scale: CGFloat {
+    @MainActor static var scale: CGFloat {
         return UIScreen.main.scale
     }
 }
@@ -36,16 +42,16 @@ private enum Screen {
 import WatchKit
 
 private enum Screen {
-    static var scale: CGFloat {
+    @MainActor static var scale: CGFloat {
         return WKInterfaceDevice.current().screenScale
     }
 }
 
-#elseif os(visionOS)
+#elseif supportsVisionOS
 public enum Screen {
     /// visionOS doesn't have a screen scale, so we'll just use 2x for Tests.
     /// override it on your own risk.
-    public static var scale: CGFloat?
+    @MainActor public static var scale: CGFloat?
 }
 #endif
 
@@ -66,12 +72,14 @@ internal struct PlatformImage {
     }
 
     func pngData() -> Data? {
-        return sdk.png
+        return sdk.pngData()
     }
 
-    #elseif os(visionOS)
+    #elseif supportsVisionOS
     init?(data: Data) {
-        if let scale = Screen.scale,
+        let scale = Queue.isolatedMain.sync { Screen.scale }
+
+        if let scale,
            let image = UIImage(data: data, scale: scale) {
             self.init(image)
         } else if let image = UIImage(data: data) {
@@ -91,7 +99,9 @@ internal struct PlatformImage {
 
     #elseif os(iOS) || os(tvOS) || os(watchOS)
     init?(data: Data) {
-        if let image = UIImage(data: data, scale: Screen.scale) {
+        let scale = Queue.isolatedMain.sync { Screen.scale }
+
+        if let image = UIImage(data: data, scale: scale) {
             self.init(image)
         } else {
             return nil
@@ -120,6 +130,8 @@ private extension Data {
 }
 
 private extension NSImage {
-    var png: Data? { tiffRepresentation?.bitmap?.png }
+    func pngData() -> Data? {
+        return tiffRepresentation?.bitmap?.png
+    }
 }
 #endif

@@ -26,3 +26,7 @@ final class FakeImageDownloadQueueing: ImageDownloadQueueing, Spryable {
         return spryify(arguments: hash, prioritizer, starter)
     }
 }
+
+#if swift(>=6.0)
+extension FakeImageDownloadQueueing: @unchecked Sendable {}
+#endif

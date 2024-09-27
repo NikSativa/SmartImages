@@ -1,6 +1,6 @@
 import Foundation
 
-#if os(iOS) || os(tvOS) || os(visionOS) || os(watchOS)
+#if os(iOS) || os(tvOS) || supportsVisionOS || os(watchOS)
 import UIKit
 #elseif os(macOS)
 import Cocoa
@@ -9,12 +9,18 @@ import Cocoa
 #endif
 
 public enum ImagePlaceholder {
+    #if swift(>=6.0)
+    public typealias CustomAnimation = @MainActor (ImageView) -> Void
+    #else
+    public typealias CustomAnimation = (ImageView) -> Void
+    #endif
+
     case none
     case clear
     case image(Image)
-    case custom((ImageView) -> Void)
+    case custom(CustomAnimation)
 
-    #if os(iOS) || os(tvOS) || os(watchOS) || os(visionOS)
+    #if os(iOS) || os(tvOS) || os(watchOS) || supportsVisionOS
     case imageNamed(String, bundle: Bundle)
 
     func imageNamed(_ name: String) -> Self {
@@ -25,7 +31,7 @@ public enum ImagePlaceholder {
     case imageNamed(String)
     #endif
 
-    #if os(iOS) || os(tvOS) || os(visionOS)
+    #if os(iOS) || os(tvOS) || supportsVisionOS
     @available(iOS 17.0, macOS 14.0, tvOS 17.0, *)
     func resource(_ res: ImageResource) -> Self {
         return .init(resource: res)
@@ -43,3 +49,7 @@ public enum ImagePlaceholder {
         self = image.map(Self.image) ?? .clear
     }
 }
+
+#if swift(>=6.0)
+extension ImagePlaceholder: @unchecked Sendable {}
+#endif

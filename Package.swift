@@ -1,4 +1,4 @@
-// swift-tools-version:5.9
+// swift-tools-version:6.0
 // swiftformat:disable all
 import PackageDescription
 
@@ -13,12 +13,11 @@ let package = Package(
         .watchOS(.v6)
     ],
     products: [
-        .library(name: "SmartImages", targets: ["SmartImages"]),
-        .library(name: "SmartImagesTestHelpers", targets: ["SmartImagesTestHelpers"])
+        .library(name: "SmartImages", targets: ["SmartImages"])
     ],
     dependencies: [
-        .package(url: "https://github.com/NikSativa/Threading.git", .upToNextMajor(from: "1.3.5")),
-        .package(url: "https://github.com/NikSativa/SpryKit.git", .upToNextMajor(from: "2.2.3"))
+        .package(url: "https://github.com/NikSativa/Threading.git", branch: "2.0.0"),
+        .package(url: "https://github.com/NikSativa/SpryKit.git", branch: "3.0.0")
     ],
     targets: [
         .target(name: "SmartImages",
@@ -27,28 +26,23 @@ let package = Package(
                 ],
                 path: "Source",
                 resources: [
-                    .copy("../PrivacyInfo.xcprivacy")
-                ]),
-        .target(name: "SmartImagesTestHelpers",
-                dependencies: [
-                    "SpryKit",
-                    "SmartImages"
+                    .process("PrivacyInfo.xcprivacy")
                 ],
-                path: "TestHelpers",
-                resources: [
-                    .copy("../PrivacyInfo.xcprivacy")
+                swiftSettings: [
+                    .define("supportsVisionOS", .when(platforms: [.visionOS])),
                 ]),
         .testTarget(name: "SmartImagesTests",
                     dependencies: [
                         "SmartImages",
-                        "SmartImagesTestHelpers",
                         "SpryKit",
                         "Threading",
-                        .product(name: "ThreadingTestHelpers", package: "Threading")
                     ],
                     path: "Tests",
                     resources: [
                         .process("TestImages")
+                    ],
+                    swiftSettings: [
+                        .define("supportsVisionOS", .when(platforms: [.visionOS])),
                     ])
     ]
 )

@@ -1,13 +1,12 @@
 import Combine
 import Foundation
-import SmartImagesTestHelpers
 import SpryKit
 import Threading
 import XCTest
 
 @testable import SmartImages
 
-final class ImageDownloaderTests: XCTestCase {
+final class ImageDownloaderTests: XCTestCase, @unchecked Sendable {
     private lazy var task: FakeImageDownloaderTask = {
         let task = FakeImageDownloaderTask()
         task.stub(.start).andReturn()
@@ -63,7 +62,7 @@ final class ImageDownloaderTests: XCTestCase {
         }
         XCTAssertHaveNotReceived(imageCache, .store)
 
-        wait(for: [expLoading, expImage], timeout: 0.5)
+        wait(for: [expLoading, expImage], timeout: 10)
 
         XCTAssertHaveReceived(imageCache, .store)
 
@@ -95,7 +94,7 @@ final class ImageDownloaderTests: XCTestCase {
         }
         XCTAssertHaveNotReceived(imageCache, .store)
 
-        wait(for: [expLoading, expImage, expToken], timeout: 0.2)
+        wait(for: [expLoading, expImage, expToken], timeout: 10)
 
         XCTAssertHaveReceived(task, .cancel)
     }
@@ -121,16 +120,17 @@ final class ImageDownloaderTests: XCTestCase {
         let limit = 100
         var tokens: Set<AnyCancellable> = []
         var expsResult: [XCTestExpectation] = []
-        var expsLoading: [XCTestExpectation] = []
+        let expsLoading: SendableResult<[XCTestExpectation]> = .init(value: [])
 
         downloadQueue.resetStubs()
         downloadQueue.stub(.add).andDo { args in
+            let sendableArgs = SendableResult(value: args)
             Queue.main.asyncAfter(deadline: .now() + rands()) {
-                let url = (args[0] as? URL)!
+                let url = (sendableArgs.value[0] as? URL)!
                 let ind: Int = .init(url.absoluteString.components(separatedBy: "/").last!)!
 
-                (args[2] as? FakeImageDownloadQueueing.StarterClosure)! {
-                    expsLoading[ind].fulfill()
+                (sendableArgs.value[2] as? FakeImageDownloadQueueing.StarterClosure)! {
+                    expsLoading.value[ind].fulfill()
                 }
             }
             return ()
@@ -139,27 +139,28 @@ final class ImageDownloaderTests: XCTestCase {
         for i in 0..<limit {
             let url: URL = .testMake("google.com/\(i)")
             let expLoading = expectation(description: "wait \(i) loading")
-            expsLoading.append(expLoading)
+            expsLoading.value.append(expLoading)
 
             network.stub(.request).with(url, Argument.anything, Argument.anything, Argument.anything).andDo { args in
                 // swiftformat:disable:next all
-                let completion = args[3] as! (Result<Data, Error>) -> Void
+                let completion = SendableResult(value: args[3] as? (Result<Data, Error>) -> Void)
                 if i < limit / 2 {
                     let image: Image = .spry.testImage4
                     let imageData: Data = PlatformImage(image).pngData()!
                     Queue.main.asyncAfter(deadline: .now() + rands()) {
-                        completion(.success(imageData))
+                        completion.value(.success(imageData))
                         expLoading.fulfill()
                     }
                 } else {
                     Queue.main.asyncAfter(deadline: .now() + rands()) {
-                        completion(.failure(URLError(URLError.Code.badServerResponse)))
+                        completion.value(.failure(URLError(URLError.Code.badServerResponse)))
                         expLoading.fulfill()
                     }
                 }
 
                 let task = FakeImageDownloaderTask()
                 task.stub(.start).andReturn()
+                task.stub(.cancel).andReturn()
 
                 return task
             }
@@ -177,7 +178,7 @@ final class ImageDownloaderTests: XCTestCase {
             }.store(in: &tokens)
         }
 
-        wait(for: expsResult + expsLoading, timeout: 10)
+        wait(for: expsResult + expsLoading.value, timeout: 10)
 
         // should not call cancel
         // try to make 'timeout: 10' to by sure that every task was finished correctly

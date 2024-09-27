@@ -1,12 +1,21 @@
 import Foundation
 import Threading
 
+#if swift(>=6.0)
+public protocol ImageCaching: Sendable {
+    func cached(for key: URL) -> Data?
+    func store(_ data: Data, for key: URL)
+    func remove(for key: URL)
+    func removeAll()
+}
+#else
 public protocol ImageCaching {
     func cached(for key: URL) -> Data?
     func store(_ data: Data, for key: URL)
     func remove(for key: URL)
     func removeAll()
 }
+#endif
 
 internal final class ImageCache {
     private let mutex: Mutexing = Mutex.pthread(.recursive)

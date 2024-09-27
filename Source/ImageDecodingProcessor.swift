@@ -20,3 +20,7 @@ internal struct ImageDecodingProcessor {
         return nil
     }
 }
+
+#if swift(>=6.0)
+extension ImageDecodingProcessor: Sendable {}
+#endif
