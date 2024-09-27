@@ -53,3 +53,7 @@ private extension Int? {
         return 400 * 1024 * 1024 // 400MB
     }
 }
+
+#if swift(>=6.0)
+extension ImageCacheInfo: Sendable {}
+#endif

@@ -1,16 +1,18 @@
+#if canImport(SpryMacroAvailable) && swift(>=6.0)
 import Foundation
-import SmartImagesTestHelpers
 import SpryKit
 import Threading
-import ThreadingTestHelpers
 import XCTest
 
 @testable import SmartImages
 
 final class ImageDownloadQueueTests: XCTestCase {
+    /// `@Sendable` in `SmartImages.VoidClosure` is breaking the cast
+    private typealias VoidClosure = () -> Void
+
     func test_unlimited() {
         let queue = FakeQueueable()
-        queue.stub(.async).andDo { args in
+        queue.stub(.asyncWithExecute).andDo { args in
             if let task = args[0] as? VoidClosure {
                 task()
             }
@@ -19,24 +21,24 @@ final class ImageDownloadQueueTests: XCTestCase {
 
         let subject = ImageDownloadQueue(concurrentImagesLimit: nil,
                                          operatioThreading: queue)
-        var started: [Int] = []
+        let started: SendableResult<[Int]> = .init(value: [])
 
         for i in 0..<100 {
             subject.add(hash: i) {
                 return .preset(.normal)
             } starter: { _ in
-                started.append(i)
+                started.value.append(i)
             }
             queue.asyncWorkItem?()
         }
 
-        XCTAssertEqual(started.count, 100)
+        XCTAssertEqual(started.value.count, 100)
     }
 
     func test_limited() {
         let limit = 5
         let queue = FakeQueueable()
-        queue.stub(.async).andDo { args in
+        queue.stub(.asyncWithExecute).andDo { args in
             if let task = args[0] as? VoidClosure {
                 task()
             }
@@ -45,73 +47,73 @@ final class ImageDownloadQueueTests: XCTestCase {
 
         let subject = ImageDownloadQueue(concurrentImagesLimit: limit,
                                          operatioThreading: queue)
-        var started: [Int: VoidClosure] = [:]
+        let started: SendableResult<[Int: VoidClosure]> = .init(value: [:])
 
         for i in 0..<100 {
             subject.add(hash: i) {
                 return .preset(.normal)
             } starter: { completion in
-                started[i] = {
-                    started[i] = nil
+                started.value[i] = {
+                    started.value[i] = nil
                     completion()
-                }
+                } as VoidClosure
             }
         }
 
         subject.add(hash: "google.com/hasImageView") {
             return .hasImageView
         } starter: { completion in
-            started[111] = {
-                started[111] = nil
+            started.value[111] = {
+                started.value[111] = nil
                 completion()
-            }
+            } as VoidClosure
         }
 
-        XCTAssertEqual(started.count, limit)
-        XCTAssertEqual(started.keys.sorted(), [0, 1, 2, 3, 4])
+        XCTAssertEqual(started.value.count, limit)
+        XCTAssertEqual(started.value.keys.sorted(), [0, 1, 2, 3, 4])
 
-        started[0]!()
-        XCTAssertEqual(started.count, limit)
-        XCTAssertEqual(started.keys.sorted(), [1, 2, 3, 4, 111]) // added by priority 'hasImageView'
+        started.value[0]!()
+        XCTAssertEqual(started.value.count, limit)
+        XCTAssertEqual(started.value.keys.sorted(), [1, 2, 3, 4, 111]) // added by priority 'hasImageView'
 
-        started[1]!()
-        XCTAssertEqual(started.count, limit)
-        XCTAssertEqual(started.keys.sorted(), [2, 3, 4, 99, 111]) // added from the end by timestamp
+        started.value[1]!()
+        XCTAssertEqual(started.value.count, limit)
+        XCTAssertEqual(started.value.keys.sorted(), [2, 3, 4, 99, 111]) // added from the end by timestamp
 
-        started[111]!()
-        XCTAssertEqual(started.count, limit)
-        XCTAssertEqual(started.keys.sorted(), [2, 3, 4, 98, 99]) // added from the end by timestamp
+        started.value[111]!()
+        XCTAssertEqual(started.value.count, limit)
+        XCTAssertEqual(started.value.keys.sorted(), [2, 3, 4, 98, 99]) // added from the end by timestamp
 
-        started[3]!()
-        XCTAssertEqual(started.count, limit)
-        XCTAssertEqual(started.keys.sorted(), [2, 4, 97, 98, 99]) // added from the end by timestamp
+        started.value[3]!()
+        XCTAssertEqual(started.value.count, limit)
+        XCTAssertEqual(started.value.keys.sorted(), [2, 4, 97, 98, 99]) // added from the end by timestamp
 
-        started[98]!()
-        XCTAssertEqual(started.count, limit)
-        XCTAssertEqual(started.keys.sorted(), [2, 4, 96, 97, 99]) // added from the end by timestamp
+        started.value[98]!()
+        XCTAssertEqual(started.value.count, limit)
+        XCTAssertEqual(started.value.keys.sorted(), [2, 4, 96, 97, 99]) // added from the end by timestamp
     }
 
     func test_real_queue() {
         let limit = 5
         let subject = ImageDownloadQueue(concurrentImagesLimit: limit,
                                          operatioThreading: nil)
-        var started: [Int: VoidClosure] = [:]
-        var expectations: [Int: XCTestExpectation] = [:]
-        var fulfilled: Set<Int> = []
+        let expectations: SendableResult<[Int: XCTestExpectation]> = .init(value: [:])
+        let started: SendableResult<[Int: () -> Void]> = .init(value: [:])
+        let fulfilled: SendableResult<Set<Int>> = .init(value: [])
 
         for i in 0..<100 {
             let exp = expectation(description: "\(i)")
-            expectations[i] = exp
+            expectations.value[i] = exp
 
             subject.add(hash: i) {
                 return .preset(.normal)
             } starter: { completion in
                 exp.fulfill()
-                XCTAssertTrue(fulfilled.insert(i).inserted)
+                XCTAssertTrue(fulfilled.value.insert(i).inserted)
 
-                started[i] = {
-                    expectations[i] = nil
-                    started[i] = nil
+                started.value[i] = {
+                    expectations.value[i] = nil
+                    started.value[i] = nil
                     completion()
                 }
             }
@@ -123,18 +125,18 @@ final class ImageDownloadQueueTests: XCTestCase {
             exp.isInverted = true
             wait(for: [exp], timeout: 0.1)
 
-            let ids = Array(started.keys)
+            let ids = Array(started.value.keys)
             XCTAssertNotEqual(ids, prev)
             XCTAssertEqual(ids.count, limit)
-            wait(for: expectations[ids], timeout: 0.1)
+            wait(for: expectations.value[ids], timeout: 0.1)
 
             prev = ids
-            for value in started.values {
+            for value in started.value.values {
                 value()
             }
-        } while fulfilled.count < 100
+        } while fulfilled.value.count < 100
 
-        XCTAssertEqual(fulfilled.count, 100)
+        XCTAssertEqual(fulfilled.value.count, 100)
     }
 }
 
@@ -149,3 +151,4 @@ private extension Dictionary {
         return result
     }
 }
+#endif

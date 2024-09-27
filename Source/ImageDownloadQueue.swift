@@ -6,11 +6,25 @@ internal enum ImageDownloadQueuePriority: Comparable {
     case hasImageView
 }
 
-internal protocol ImageDownloadQueueing {
+#if swift(>=6.0)
+internal protocol ImageDownloadQueueing: Sendable {
+    typealias Prioritizer = @Sendable () -> ImageDownloadQueuePriority
+    typealias Starter = @Sendable (_ completion: @escaping VoidClosure) -> Void
+
     func add(hash: AnyHashable,
-             prioritizer: @escaping () -> ImageDownloadQueuePriority,
-             starter: @escaping (_ completion: @escaping VoidClosure) -> Void)
+             prioritizer: @escaping Prioritizer,
+             starter: @escaping Starter)
 }
+#else
+internal protocol ImageDownloadQueueing {
+    typealias Prioritizer = () -> ImageDownloadQueuePriority
+    typealias Starter = (_ completion: @escaping VoidClosure) -> Void
+
+    func add(hash: AnyHashable,
+             prioritizer: @escaping Prioritizer,
+             starter: @escaping Starter)
+}
+#endif
 
 internal final class ImageDownloadQueue {
     typealias Priority = ImageDownloadQueuePriority
@@ -90,8 +104,8 @@ internal final class ImageDownloadQueue {
 
 extension ImageDownloadQueue: ImageDownloadQueueing {
     func add(hash: AnyHashable,
-             prioritizer: @escaping () -> Priority,
-             starter: @escaping (_ completion: @escaping VoidClosure) -> Void) {
+             prioritizer: @escaping Prioritizer,
+             starter: @escaping Starter) {
         mutex.sync {
             let operation = Operation(hash: hash, prioritizer: prioritizer, starter: starter)
             scheduledOperations.append(operation)
@@ -104,15 +118,15 @@ extension ImageDownloadQueue: ImageDownloadQueueing {
 
 private extension ImageDownloadQueue {
     struct Operation: Equatable {
-        private let prioritizer: () -> Priority
+        private let prioritizer: ImageDownloadQueueing.Prioritizer
 
         let hash: AnyHashable
-        let starter: (@escaping VoidClosure) -> Void
+        let starter: ImageDownloadQueueing.Starter
         let timestamp: TimeInterval = Date().timeIntervalSinceReferenceDate
 
         init(hash: AnyHashable,
-             prioritizer: @escaping () -> Priority,
-             starter: @escaping (@escaping VoidClosure) -> Void) {
+             prioritizer: @escaping ImageDownloadQueueing.Prioritizer,
+             starter: @escaping ImageDownloadQueueing.Starter) {
             self.hash = hash
             self.prioritizer = prioritizer
             self.starter = starter
@@ -127,3 +141,9 @@ private extension ImageDownloadQueue {
         }
     }
 }
+
+#if swift(>=6.0)
+extension ImageDownloadQueue: @unchecked Sendable {}
+extension ImageDownloadQueue.Operation: @unchecked Sendable {}
+extension ImageDownloadQueuePriority: Sendable {}
+#endif

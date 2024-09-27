@@ -1,5 +1,4 @@
 import Foundation
-import SmartImagesTestHelpers
 import SpryKit
 import XCTest
 
@@ -10,7 +9,7 @@ final class ImageDecodingProcessorTests: XCTestCase {
 
     override func setUp() {
         super.setUp()
-        #if os(visionOS)
+        #if supportsVisionOS
         Screen.scale = 2
         #endif
     }

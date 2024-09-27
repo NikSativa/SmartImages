@@ -1,6 +1,5 @@
 import Foundation
 import SmartImages
-import SmartImagesTestHelpers
 import SpryKit
 import XCTest
 

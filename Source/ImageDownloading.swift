@@ -1,7 +1,7 @@
 import Combine
 import Foundation
 
-#if os(iOS) || os(tvOS) || os(visionOS) || os(watchOS)
+#if os(iOS) || os(tvOS) || supportsVisionOS || os(watchOS)
 import UIKit
 #elseif os(macOS)
 import Cocoa
@@ -9,6 +9,24 @@ import Cocoa
 #error("unsupported os")
 #endif
 
+#if swift(>=6.0)
+public protocol ImageDownloading: Sendable {
+    var imageCache: ImageCaching? { get }
+
+    func download(of info: ImageInfo,
+                  for imageView: ImageView,
+                  animated animation: ImageAnimation?,
+                  placeholder: ImagePlaceholder,
+                  completion: @escaping ImageClosure)
+
+    func download(of info: ImageInfo,
+                  completion: @escaping ImageClosure) -> AnyCancellable
+    func predownload(of info: ImageInfo,
+                     completion: @escaping ImageClosure)
+
+    func cancel(for imageView: ImageView)
+}
+#else
 public protocol ImageDownloading {
     var imageCache: ImageCaching? { get }
 
@@ -25,6 +43,7 @@ public protocol ImageDownloading {
 
     func cancel(for imageView: ImageView)
 }
+#endif
 
 public extension ImageDownloading {
     func download(of info: ImageInfo) -> AnyCancellable {

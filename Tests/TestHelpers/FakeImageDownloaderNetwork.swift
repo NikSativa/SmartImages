@@ -22,3 +22,7 @@ public final class FakeImageDownloaderNetwork: ImageDownloaderNetwork, Spryable 
         return spryify(arguments: url, cachePolicy, timeoutInterval, completion)
     }
 }
+
+#if swift(>=6.0)
+extension FakeImageDownloaderNetwork: @unchecked Sendable {}
+#endif

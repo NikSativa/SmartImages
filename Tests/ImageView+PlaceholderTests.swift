@@ -1,10 +1,12 @@
 import Foundation
 import SmartImages
-import SmartImagesTestHelpers
 import SpryKit
 import XCTest
 
 final class ImageView_PlaceholderTests: XCTestCase {
+    #if swift(>=6.0)
+    @MainActor
+    #endif
     func test_placeholder() {
         let subject = ImageView()
         XCTAssertNil(subject.image)
