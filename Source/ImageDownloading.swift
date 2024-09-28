@@ -128,7 +128,7 @@ public extension ImageDownloading {
                      cachePolicy: URLRequest.CachePolicy = .useProtocolCachePolicy,
                      timeoutInterval: TimeInterval = 60,
                      processors: [ImageProcessor] = [],
-                     priority: ImagePriority = .default,
+                     priority: ImagePriority = .prefetch,
                      completion: @escaping ImageClosure = { _ in }) {
         let info = ImageInfo(url: url,
                              cachePolicy: cachePolicy,
