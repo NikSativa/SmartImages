@@ -23,9 +23,16 @@ public typealias ImageView = NSImageView
 import SwiftUI
 
 public typealias Image = UIImage
+
+#if swift(>=6.0)
+public protocol ImageView: AnyObject, Sendable {
+    var image: Image? { get set }
+}
+#else
 public protocol ImageView: AnyObject {
     var image: Image? { get set }
 }
+#endif
 
 #else
 #error("unsupported os")
@@ -33,7 +40,10 @@ public protocol ImageView: AnyObject {
 
 #if os(iOS) || os(tvOS)
 private enum Screen {
-    @MainActor static var scale: CGFloat {
+    #if swift(>=6.0)
+    @MainActor
+    #endif
+    static var scale: CGFloat {
         return UIScreen.main.scale
     }
 }
@@ -42,16 +52,22 @@ private enum Screen {
 import WatchKit
 
 private enum Screen {
-    @MainActor static var scale: CGFloat {
+    #if swift(>=6.0)
+    @MainActor
+    #endif
+    static var scale: CGFloat {
         return WKInterfaceDevice.current().screenScale
     }
 }
 
 #elseif supportsVisionOS
 public enum Screen {
-    /// visionOS doesn't have a screen scale, so we'll just use 2x for Tests.
-    /// override it on your own risk.
-    @MainActor public static var scale: CGFloat?
+    // visionOS doesn't have a screen scale, so we'll just use 2x for Tests.
+    // override it on your own risk.
+    #if swift(>=6.0)
+    @MainActor
+    #endif
+    public static var scale: CGFloat?
 }
 #endif
 
