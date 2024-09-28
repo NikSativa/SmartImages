@@ -9,10 +9,54 @@ It uses the native Image object to load images and provides a way to cache them 
 Manager responsible for downloading images from the internet.
 
 ### ImageCache
-Manager responsible for caching images in memory.
+Manager responsible for caching images in memory. 
+By default: 
+- memory capacity is **40MB**
+- disk capacity is **400MB** 
 
 ### ImageDownloadQueue
-Manager responsible for queuing images to be downloaded and preoritizing the images that are being requested.
+Manager responsible for queuing images to be downloaded and prioritizing the images that are being requested.
+The priority changes at runtime, so it is calculated before adding to the download queue. The highest priority occurs when the image URL is attached to a UI view (SwiftUI is also supported) and has a queued timestamp that is much closer to the current time.
+
+Example:
+- You have a queue with a limit of 2 tasks at a time. 
+- You add 5 tasks with low priority:
+
+```swift
+for i in 0..<5 {
+    imageDownloader.predownload(url: URL(string: "apple.com/image_\(i)")!)
+}
+```
+
+- `ImageDownloader` is starting download first 2 images immediately.
+- You add 2 tasks which are attached to UI-view
+
+```swift
+let imageView = UIImageView()
+imageView.setImage(withURL: URL(string: "apple.com/image\_\\(99)")!) // new URL
+imageView.setImage(withURL: URL(string: "apple.com/image\_\\(3)")!)  // <-- the same URL in queue
+```
+
+- `ImageDownloader` did download 1 image and free 1 space in queue. 
+- The state is:
+    - "image\_1 - downloaded
+    - "image\_2" - in progress
+    - "image\_3"
+    - "image\_4"
+    - "image\_5"
+    - "image\_3" with View
+    - "image\_99" with View 
+
+- Prioritization algorithm will do:
+    - "image\_3" with View and added after "99" - that means timestamp is more close to "now" *("now" - "99".timestamp > "now" - "3".timestamp)*
+    - "image\_99" with View
+    - ~~"image\_1"~~ - downloaded, no longer needed
+    - "image\_2" - in progress
+    - ~~"image\_3"~~ the same URL as already added "with View"
+    - "image\_4"
+    - "image\_5"
+
+- Next task will take **"image\_3" with View** because it is attached to View and that means the User is Waiting this image on his screen.
 
 ### ImageDownloaderNetwork
 Protocol that must be implemented by the app and represents the network layer.
