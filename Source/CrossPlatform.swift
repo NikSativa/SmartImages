@@ -40,34 +40,44 @@ public protocol ImageView: AnyObject {
 
 #if os(iOS) || os(tvOS)
 private enum Screen {
-    #if swift(>=6.0)
+#if swift(>=6.0)
     @MainActor
-    #endif
     static var scale: CGFloat {
         return UIScreen.main.scale
     }
+#else
+    static var scale: CGFloat {
+        return UIScreen.main.scale
+    }
+#endif
 }
 
 #elseif os(watchOS)
 import WatchKit
 
 private enum Screen {
-    #if swift(>=6.0)
+#if swift(>=6.0)
     @MainActor
-    #endif
     static var scale: CGFloat {
         return WKInterfaceDevice.current().screenScale
     }
+#else
+    static var scale: CGFloat {
+        return WKInterfaceDevice.current().screenScale
+    }
+#endif
 }
 
 #elseif supportsVisionOS
 public enum Screen {
     // visionOS doesn't have a screen scale, so we'll just use 2x for Tests.
     // override it on your own risk.
-    #if swift(>=6.0)
+#if swift(>=6.0)
     @MainActor
-    #endif
     public static var scale: CGFloat?
+#else
+    public static var scale: CGFloat?
+#endif
 }
 #endif
 
