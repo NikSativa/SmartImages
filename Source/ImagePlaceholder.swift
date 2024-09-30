@@ -31,7 +31,7 @@ public enum ImagePlaceholder {
     case imageNamed(String)
     #endif
 
-    #if os(iOS) || os(tvOS) || supportsVisionOS
+    #if swift(>=5.9) && (os(iOS) || os(tvOS) || supportsVisionOS)
     @available(iOS 17.0, macOS 14.0, tvOS 17.0, *)
     func resource(_ res: ImageResource) -> Self {
         return .init(resource: res)
