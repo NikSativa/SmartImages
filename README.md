@@ -1,6 +1,7 @@
 # SmartImages
 [![](https://img.shields.io/endpoint?url=https%3A%2F%2Fswiftpackageindex.com%2Fapi%2Fpackages%2FNikSativa%2FSmartImages%2Fbadge%3Ftype%3Dswift-versions)](https://swiftpackageindex.com/NikSativa/SmartImages)
 [![](https://img.shields.io/endpoint?url=https%3A%2F%2Fswiftpackageindex.com%2Fapi%2Fpackages%2FNikSativa%2FSmartImages%2Fbadge%3Ftype%3Dplatforms)](https://swiftpackageindex.com/NikSativa/SmartImages)
+[![CI](https://github.com/NikSativa/SmartImages/actions/workflows/swift_macos.yml/badge.svg)](https://github.com/NikSativa/SmartImages/actions/workflows/swift_macos.yml)
 
 Simple and lightweight library for loading images in a fast way, because it prioritizes queuing and loading images in the order they are requested and/or if ImageView is waiting for an image to be loaded, it will be prioritized over the others. 
 It uses the native Image object to load images and provides a way to cache them in memory and you can also set a custom cache size.
@@ -11,8 +12,8 @@ Manager responsible for downloading images from the internet.
 ### ImageCache
 Manager responsible for caching images in memory. 
 By default: 
-- memory capacity is **40MB**
-- disk capacity is **400MB** 
+- memory capacity is **40MB** and minimum capacity is **10MB**
+- disk capacity is **400MB** and minimum capacity is **10MB**
 
 ### ImageDownloadQueue
 Manager responsible for queuing images to be downloaded and prioritizing the images that are being requested.
@@ -24,7 +25,7 @@ Example:
 
 ```swift
 for i in 0..<5 {
-    imageDownloader.predownload(url: URL(string: "apple.com/image_\(i)")!)
+    imageDownloader.prefetch(url: URL(string: "apple.com/image_\(i)")!)
 }
 ```
 
@@ -61,16 +62,125 @@ imageView.setImage(withURL: URL(string: "apple.com/image\_\\(3)")!)  // <-- the 
 ### ImageDownloaderNetwork
 Protocol that must be implemented by the app and represents the network layer.
 
-## How to use with URLSession
+## How to use
 
-in app:
+Example anywhere in the application:
 ```swift
 planeImageView.setImage(withURL: url, placeholder: .image(.planePlaceholder))
 planeImageView.setImage(withURL: url, placeholder: .clear)
 planeImageView.setImage(withURL: url)
 ```
 
-implementation:
+`UIImageView` extension for easy use:
+```swift
+// extend UIImageView for loading images
+public extension UIImageView {
+    func setImage(withURL url: URL,
+                  animated animation: ImageAnimation? = nil,
+                  placeholder: ImagePlaceholder = .none,
+                  completion: ImageClosure? = nil) {
+        let info = ImageInfo(url: url)
+        ImageDownloader.shared.download(of: info,
+                                        for: self,
+                                        animated: animation,
+                                        placeholder: placeholder,
+                                        completion: completion ?? { _ in })
+    }
+
+    func cancelImageRequest() {
+        ImageDownloader.shared.cancel(for: self)
+    }
+}
+
+// MARK: - ImageDownloader + ImageDownloading
+
+extension ImageDownloader: ImageDownloading {
+    public var imageCache: ImageCaching? {
+        return Self.shared.imageCache
+    }
+
+    public func prefetch(of info: ImageInfo,
+                         completion: @escaping ImageClosure) {
+        Self.shared.prefetch(of: info, completion: completion)
+    }
+
+    public func prefetching(of info: SmartImages.ImageInfo, completion: @escaping SmartImages.ImageClosure) -> AnyCancellable {
+        return Self.shared.prefetching(of: info, completion: completion)
+    }
+
+    public func download(of info: ImageInfo,
+                         completion: @escaping ImageClosure) -> AnyCancellable {
+        Self.shared.download(of: info,
+                             completion: completion)
+    }
+
+    public func download(of info: ImageInfo,
+                         for imageView: ImageView,
+                         animated animation: ImageAnimation?,
+                         placeholder: ImagePlaceholder = .none,
+                         completion: @escaping ImageClosure) {
+        Self.shared.download(of: info,
+                             for: imageView,
+                             animated: animation,
+                             placeholder: placeholder,
+                             completion: completion)
+    }
+
+    public func cancel(for imageView: ImageView) {
+        Self.shared.cancel(for: imageView)
+    }
+}
+```
+
+### How to use with SmartNetwork
+
+```swift
+import Combine
+import Foundation
+import SmartImages
+import SmartNetwork
+import UIKit
+
+public typealias ImageAnimation = SmartImages.ImageAnimation
+public typealias ImageClosure = SmartImages.ImageClosure
+public typealias ImageInfo = SmartImages.ImageInfo
+public typealias ImagePlaceholder = SmartImages.ImagePlaceholder
+
+public struct ImageDownloader {
+    private static let manager: RequestManagering = RequestManager.create() // <---- this is the place of your custom plugins, StopTheLine etc.
+
+    public static let shared: ImageDownloading = {
+        return SmartImages.ImageDownloader(network: ImageDownloaderNetworkAdaptor(manager: manager),
+                                           cache: .init(folderName: "DownloadedImages"),
+                                           concurrentLimit: 8)
+    }()
+
+    private init() {}
+}
+
+extension RequestingTask: @retroactive ImageDownloaderTask {}
+
+private struct ImageDownloaderNetworkAdaptor: ImageDownloaderNetwork {
+    let manager: RequestManagering
+
+    func request(with url: URL,
+                 cachePolicy: URLRequest.CachePolicy?,
+                 timeoutInterval: TimeInterval?,
+                 completion: @escaping ResultCompletion,
+                 finishedOrCancelled finished: FinishedCompletion?) -> ImageDownloaderTask {
+        return manager.data.request(address: .init(url),
+                                    with: .init(requestPolicy: cachePolicy ?? .useProtocolCachePolicy,
+                                                timeoutInterval: timeoutInterval ?? RequestSettings.timeoutInterval),
+                                    inQueue: .absent,
+                                    completion: completion)
+            .autorelease()
+            .deferredStart()
+    }
+}
+```
+
+### How to use with URLSession
+
 ```swift
 import Foundation
 import SmartImages
@@ -84,60 +194,6 @@ public enum ImageDownloader {
     }()
 
     public init() {}
-}
-
-public extension UIImageView {
-    func setImage(withURL url: URL,
-                  animated animation: ImageAnimation? = nil,
-                  placeholder: ImagePlaceholder = .none,
-                  completion: ImageClosure? = nil) {
-        let info = ImageInfo(url: url)
-        ImageDownloader().download(of: info,
-                                   for: self,
-                                   animated: animation,
-                                   placeholder: placeholder,
-                                   completion: completion ?? { _ in })
-    }
-
-    func cancelImageRequest() {
-        ImageDownloader().cancel(for: self)
-    }
-}
-
-// MARK: - ImageDownloader + ImageDownloading
-
-extension ImageDownloader: ImageDownloading {
-    public var imageCache: ImageCaching? {
-        return Self.imageDownloader.imageCache
-    }
-
-    public func predownload(of info: ImageInfo,
-                            completion: @escaping ImageClosure) {
-        Self.imageDownloader.predownload(of: info,
-                                         completion: completion)
-    }
-
-    public func download(of info: ImageInfo,
-                         completion: @escaping ImageClosure) -> AnyCancellable {
-        Self.imageDownloader.download(of: info,
-                                      completion: completion)
-    }
-
-    public func download(of info: ImageInfo,
-                         for imageView: ImageView,
-                         animated animation: ImageAnimation?,
-                         placeholder: ImagePlaceholder = .none,
-                         completion: @escaping ImageClosure) {
-        Self.imageDownloader.download(of: info,
-                                      for: imageView,
-                                      animated: animation,
-                                      placeholder: placeholder,
-                                      completion: completion)
-    }
-
-    public func cancel(for imageView: ImageView) {
-        Self.imageDownloader.cancel(for: imageView)
-    }
 }
 
 private struct ImageDownloaderTaskAdaptor: ImageDownloaderTask {
@@ -172,5 +228,4 @@ private struct ImageDownloaderNetworkAdaptor: ImageDownloaderNetwork {
         return ImageDownloaderTaskAdaptor(task: dataTask)
     }
 }
-
 ```

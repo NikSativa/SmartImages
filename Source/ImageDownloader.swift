@@ -10,6 +10,15 @@ import Cocoa
 #error("unsupported os")
 #endif
 
+/// The ImageDownloader class is a final class in Swift designed for downloading and managing image resources.
+/// It conforms to the ImageDownloading protocol and provides functionalities for handling image download tasks efficiently.
+/// With properties for network implementation, image decoding processor, download queue management, and image caching,
+/// the ImageDownloader class offers a comprehensive solution for handling image-related operations.
+/// The class encapsulates methods for adding images to views, managing closures, checking cached images,
+/// scheduling downloads, and handling loaded images. Additionally, it includes internal initializers for testing purposes and
+/// implements the ImageDownloading protocol.
+/// The ImageDownloader class serves as a crucial component for handling image downloads within the system,
+/// facilitating smooth image loading and processing operations
 public final class ImageDownloader {
     private final class ClosureToken {
         let closure: ImageClosure
@@ -26,31 +35,35 @@ public final class ImageDownloader {
     private var cacheInfos: [URL: ImageInfo] = [:]
     private var cacheActiveTasks: [URL: any Cancellable] = [:]
 
+    /// The network implementation used for downloading images.
     private let network: ImageDownloaderNetwork
+    /// The processor for decoding images.
     private let imageDecoding: ImageDecodingProcessor
+    /// The queue for managing image download tasks.
     private let downloadQueue: ImageDownloadQueueing
+    /// The cache implementation for storing downloaded images.
     public let imageCache: ImageCaching?
 
-    /// ImageDownloader factory method
-    /// - network — Use it to adapt any custom network, ex. URLSession
-    /// - cache — The ImageCacheInfo is configuration for URLCache which implements the caching of responses to URL load requests
-    /// - decoders — Custom decoding, ex. WebP
-    /// - decodingQueue — Queue for decoding
-    /// - concurrentImagesLimit — Number of concurrent image download tasks
-    public static func create(network: ImageDownloaderNetwork,
-                              cache: ImageCacheInfo? = nil,
-                              decoders: [ImageDecoding] = [ImageDecoders.Default()],
-                              decodingQueue: DelayedQueue = .absent,
-                              concurrentImagesLimit limit: Int? = nil) -> ImageDownloading {
-        let imageCache: ImageCache? = cache.map(ImageCache.init(info:))
-        return Self(network: network,
-                    decodingQueue: decodingQueue,
-                    imageCache: imageCache,
-                    imageDecoding: ImageDecodingProcessor(decoders: decoders),
-                    downloadQueue: ImageDownloadQueue(concurrentImagesLimit: limit))
+    /// Initializes an `ImageDownloader` instance with specified parameters.
+    /// - Parameters:
+    ///   - network: The network implementation for image downloading.
+    ///   - cache: Optional image cache information.
+    ///   - decoders: Array of image decoding processors, defaulting to `[ImageDecoders.Default()]`. As result of decoding `ImageDownloader` will the first successful decoded image.
+    ///   - decodingQueue: Queue for managing image decoding operations, defaulting to `.absent`. If the queue is absent, the decoding will be performed synchronously with `ImageDownloaderNetwork`.
+    ///   - concurrentLimit: Limitation for concurrent image downloads. If the limit is `nil` then it's unlimited.
+    public required init(network: ImageDownloaderNetwork,
+                         cache: ImageCacheInfo? = nil,
+                         decoders: [ImageDecoding] = [],
+                         decodingQueue: DelayedQueue = .absent,
+                         concurrentLimit limit: Int? = nil) {
+        self.network = network
+        self.imageCache = cache.map(ImageCache.init(info:))
+        self.imageDecoding = ImageDecodingProcessor(decoders: decoders)
+        self.downloadQueue = ImageDownloadQueue(concurrentImagesLimit: limit)
+        self.decodingQueue = decodingQueue
     }
 
-    /// testable initializer
+    /// The internal initializer is for testing purposes only.
     internal init(network: ImageDownloaderNetwork,
                   decodingQueue: DelayedQueue,
                   imageCache: ImageCaching? = nil,
@@ -148,17 +161,23 @@ public final class ImageDownloader {
             }
 
             let task = network.request(with: info?.url ?? url,
-                                       cachePolicy: info?.cachePolicy ?? .useProtocolCachePolicy,
-                                       timeoutInterval: info?.timeoutInterval ?? 60) { [self] result in
-                mutex.sync {
-                    cacheActiveTasks[url] = nil
-                }
+                                       cachePolicy: info?.cachePolicy,
+                                       timeoutInterval: info?.timeoutInterval,
+                                       completion: { [self] result in
+                                           mutex.sync {
+                                               cacheActiveTasks[url] = nil
+                                           }
 
-                completion()
-                decodingQueue.fire { [self] in
-                    handleLoaded(result, animated: animation, for: url)
-                }
-            }
+                                           completion()
+                                           decodingQueue.fire { [self] in
+                                               handleLoaded(result, animated: animation, for: url)
+                                           }
+                                       },
+                                       finishedOrCancelled: { [self] in
+                                           mutex.sync {
+                                               cacheActiveTasks[url] = nil
+                                           }
+                                       })
 
             mutex.sync {
                 cacheActiveTasks[url] = task
@@ -237,13 +256,41 @@ public final class ImageDownloader {
 
     private func needDownload(of info: ImageInfo, for imageView: UnSendable<ImageView>) -> Bool {
         return Queue.isolatedMain.sync {
-            if info.cachePolicy.canUseCachedData,
+            if let cachePolicy = info.cachePolicy,
+               cachePolicy.canUseCachedData,
                let image = imageView.value.image,
                let currentSourceURL = image.sourceURL,
                currentSourceURL == info.url {
                 return false
             }
             return true
+        }
+    }
+
+    private func cancel(_ url: URL, token uniq: ClosureToken) -> AnyCancellable {
+        return .init { [weak self, uniq, url] in
+            guard let self else {
+                return
+            }
+
+            mutex.sync { [uniq, url] in
+                var arr = self.cacheClosures[url] ?? []
+                arr = arr.filter {
+                    return uniq !== $0
+                }
+
+                if arr.isEmpty {
+                    self.cacheClosures[url] = nil
+
+                    if self.cacheViews[url] == nil {
+                        self.cacheInfos[url] = nil
+                        self.cacheActiveTasks[url]?.cancel()
+                        self.cacheActiveTasks[url] = nil
+                    }
+                } else {
+                    self.cacheClosures[url] = arr
+                }
+            }
         }
     }
 }
@@ -271,42 +318,28 @@ extension ImageDownloader: ImageDownloading {
         scheduleDownload(of: info, animated: animation)
     }
 
-    public func download(of info: ImageInfo,
-                         completion: @escaping ImageClosure) -> AnyCancellable {
+    public func download(of info: ImageInfo, completion: @escaping ImageClosure) -> AnyCancellable {
         let url = info.url
         let uniq = add(url, with: completion)
 
         addInfoIfNeeded(info)
         scheduleDownload(of: info, animated: nil)
 
-        return .init { [weak self, uniq, url] in
-            guard let self else {
-                return
-            }
-
-            mutex.sync { [uniq, url] in
-                var arr = self.cacheClosures[url] ?? []
-                arr = arr.filter {
-                    return uniq !== $0
-                }
-
-                if arr.isEmpty {
-                    self.cacheClosures[url] = nil
-
-                    if self.cacheViews[url] == nil {
-                        self.cacheInfos[url] = nil
-                        self.cacheActiveTasks[url]?.cancel()
-                        self.cacheActiveTasks[url] = nil
-                    }
-                } else {
-                    self.cacheClosures[url] = arr
-                }
-            }
-        }
+        return cancel(url, token: uniq)
     }
 
-    public func predownload(of info: ImageInfo,
-                            completion: @escaping ImageClosure) {
+    public func prefetching(of info: ImageInfo, completion: @escaping ImageClosure) -> AnyCancellable {
+        let url = info.url
+        let uniq = add(url, with: completion)
+
+        addInfoIfNeeded(info)
+        scheduleDownload(of: info, animated: nil)
+
+        return cancel(url, token: uniq)
+    }
+
+    public func prefetch(of info: ImageInfo,
+                         completion: @escaping ImageClosure) {
         _ = add(info.url, with: completion)
         addInfoIfNeeded(info)
         scheduleDownload(of: info, animated: nil)

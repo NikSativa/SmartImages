@@ -5,16 +5,14 @@ import XCTest
 @testable import SmartImages
 
 final class ImageCacheTests: XCTestCase {
-    func test_should_create_url_cache_with_correct_memory_usage() {
+    func test_should_create_url_cache_with_correct_memory_usage() throws {
         let url1: URL = .testMake("https://data1.com")
         let url2: URL = .testMake("https://data2.com")
 
         let data1 = "data1".data(using: .utf8).unsafelyUnwrapped
         let data2 = "data2".data(using: .utf8).unsafelyUnwrapped
 
-        let info = ImageCacheInfo(folderName: "TestImageDownloaderCache")
-        XCTAssertNotNil(info)
-
+        let info = try XCTUnwrap(ImageCacheInfo(folderName: "TestImageDownloaderCache"))
         let subject: ImageCaching = ImageCache(info: info)
         let urlCache: URLCache = (subject as! ImageCache).urlCache
         XCTAssertEqual(urlCache.diskCapacity, 400 * 1024 * 1024)

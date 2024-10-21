@@ -102,8 +102,8 @@ final class ImageDownloaderTests: XCTestCase, @unchecked Sendable {
     func test_create() {
         let network = FakeImageDownloaderNetwork()
         let cache = ImageCacheInfo(folderName: "ImageDownloaderTests.ImageCacheInfo.folderName")
-        let subject: ImageDownloading? = ImageDownloader.create(network: network,
-                                                                cache: cache)
+        let subject: ImageDownloading? = ImageDownloader(network: network,
+                                                         cache: cache)
         XCTAssertNotNil(subject)
     }
 
@@ -113,9 +113,9 @@ final class ImageDownloaderTests: XCTestCase, @unchecked Sendable {
         }
 
         let network = FakeImageDownloaderNetwork()
-        let subject: ImageDownloading = ImageDownloader.create(network: network,
-                                                               cache: nil,
-                                                               concurrentImagesLimit: 10)
+        let subject: ImageDownloading = ImageDownloader(network: network,
+                                                        cache: nil,
+                                                        concurrentLimit: 10)
 
         let limit = 100
         var tokens: Set<AnyCancellable> = []
@@ -141,13 +141,12 @@ final class ImageDownloaderTests: XCTestCase, @unchecked Sendable {
             let expLoading = expectation(description: "wait \(i) loading")
             expsLoading.value.append(expLoading)
 
-            network.stub(.request).with(url, Argument.anything, Argument.anything, Argument.anything).andDo { args in
-                // swiftformat:disable:next all
-                let completion = SendableResult(value: args[3] as? (Result<Data, Error>) -> Void)
+            network.stub(.request).with(url, Argument.nil, Argument.nil, Argument.closure, Argument.closure).andDo { args in
+                let completion = SendableResult(value: args[3] as? ImageDownloaderNetwork.ResultCompletion)
                 if i < limit / 2 {
-                    let image: Image = .spry.testImage4
-                    let imageData: Data = PlatformImage(image).pngData()!
                     Queue.main.asyncAfter(deadline: .now() + rands()) {
+                        let image: Image = .spry.testImage4
+                        let imageData: Data = PlatformImage(image).pngData() ?? Data()
                         completion.value(.success(imageData))
                         expLoading.fulfill()
                     }

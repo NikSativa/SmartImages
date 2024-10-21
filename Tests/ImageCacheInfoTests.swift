@@ -5,34 +5,39 @@ import XCTest
 
 final class ImageCacheInfoTests: XCTestCase {
     func test_create_with_file_manager() {
-        let urls: [URL] = [
-            .testMake("file://path/directory"),
-            .testMake("file://path/directory/unused")
-        ]
+        // less than minimum size
+        var subject = ImageCacheInfo(folderName: "folderName_1",
+                                     memoryCapacity: 10 * 1024 * 1024,
+                                     diskCapacity: 100 * 1024 * 1024)
+        XCTAssertEqual(subject?.directory, Self.fileURL(forFolderName: "folderName_1"))
+        XCTAssertEqual(subject?.memoryCapacity, 10 * 1024 * 1024)
+        XCTAssertEqual(subject?.diskCapacity, 100 * 1024 * 1024)
 
-        let fileManager: FakeImageDownloaderFileManager = .init()
-        fileManager.stub(.urls).andReturn(urls)
+        // custom size
+        subject = ImageCacheInfo(folderName: "folderName_2",
+                                 memoryCapacity: 20 * 1024 * 1024,
+                                 diskCapacity: 20 * 1024 * 1024)
+        XCTAssertEqual(subject?.directory, Self.fileURL(forFolderName: "folderName_2"))
+        XCTAssertEqual(subject?.memoryCapacity, 20 * 1024 * 1024)
+        XCTAssertEqual(subject?.diskCapacity, 20 * 1024 * 1024)
 
-        let info = ImageCacheInfo(folderName: "folderName",
-                                  fileManager: fileManager)
-        XCTAssertEqual(info, ImageCacheInfo(directory: urls[0].appendingPathComponent("folderName", isDirectory: true),
-                                            memoryCapacity: 40 * 1024 * 1024,
-                                            diskCapacity: 400 * 1024 * 1024))
-
-        let directory: FileManager.SearchPathDirectory = .cachesDirectory
-        let domainMask: FileManager.SearchPathDomainMask = .userDomainMask
-        XCTAssertHaveReceived(fileManager, .urls, with: directory, domainMask)
+        // default size
+        subject = ImageCacheInfo(folderName: "folderName_3")
+        XCTAssertEqual(subject?.directory, Self.fileURL(forFolderName: "folderName_3"))
+        XCTAssertEqual(subject?.memoryCapacity, 40 * 1024 * 1024)
+        XCTAssertEqual(subject?.diskCapacity, 400 * 1024 * 1024)
     }
 
     func test_create_with_default_behaviour() {
-        let fileManager = FileManager.default
-        let urls = fileManager.urls(for: .cachesDirectory,
-                                    in: .userDomainMask)
-        let directory = urls.first?.appendingPathComponent("DownloadedImages", isDirectory: true)
-
         let info = ImageCacheInfo()
-        XCTAssertEqual(info, ImageCacheInfo(directory: directory.unsafelyUnwrapped,
-                                            memoryCapacity: 40 * 1024 * 1024,
-                                            diskCapacity: 400 * 1024 * 1024))
+        XCTAssertEqual(info?.directory, Self.fileURL(forFolderName: "DownloadedImages"))
+        XCTAssertEqual(info?.memoryCapacity, 40 * 1024 * 1024)
+        XCTAssertEqual(info?.diskCapacity, 400 * 1024 * 1024)
+    }
+
+    private static func fileURL(forFolderName name: String) -> URL {
+        let urls = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)
+        let directory = urls.first?.appendingPathComponent(name, isDirectory: true)
+        return directory ?? URL(fileURLWithPath: "unknown path")
     }
 }

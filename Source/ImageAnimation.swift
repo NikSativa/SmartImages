@@ -1,5 +1,6 @@
 import Foundation
 
+/// Animation to be used when setting an image to an image view.
 public enum ImageAnimation {
     #if os(iOS) || os(tvOS)
     case crossDissolve

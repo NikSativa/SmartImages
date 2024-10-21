@@ -2,10 +2,14 @@ import Foundation
 import Threading
 
 #if swift(>=6.0)
+/// Protocol for processing images while they are being downloaded and decoded.
+/// Ex. resizing, cropping, blurring, etc.
 public protocol ImageProcessor: Sendable {
     func process(_ image: Image) -> Image
 }
 #else
+/// Protocol for processing images while they are being downloaded and decoded.
+/// Ex. resizing, cropping, blurring, etc.
 public protocol ImageProcessor {
     func process(_ image: Image) -> Image
 }

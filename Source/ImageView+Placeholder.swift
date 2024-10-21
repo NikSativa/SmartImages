@@ -12,6 +12,7 @@ import Cocoa
 #endif
 
 public extension ImageView {
+    // Sets the placeholder for the image view. `public` access level is to allow use this method in your custom Animations or Placeholders.
     #if swift(>=6.0)
     @MainActor
     #endif

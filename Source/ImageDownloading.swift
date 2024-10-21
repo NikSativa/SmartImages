@@ -10,82 +10,80 @@ import Cocoa
 #endif
 
 #if swift(>=6.0)
+/// A protocol representing the behavior of downloading images asynchronously.
 public protocol ImageDownloading: Sendable {
+    /// The image cache used for downloaded images.
     var imageCache: ImageCaching? { get }
 
+    /// Downloads an image with the specified info and sets it to the image view.
     func download(of info: ImageInfo,
                   for imageView: ImageView,
                   animated animation: ImageAnimation?,
                   placeholder: ImagePlaceholder,
                   completion: @escaping ImageClosure)
 
-    func download(of info: ImageInfo,
-                  completion: @escaping ImageClosure) -> AnyCancellable
-    func predownload(of info: ImageInfo,
-                     completion: @escaping ImageClosure)
+    /// Downloads an image with the specified info.
+    func download(of info: ImageInfo, completion: @escaping ImageClosure) -> AnyCancellable
 
+    /// Prefetches an image with the specified info.
+    func prefetch(of info: ImageInfo, completion: @escaping ImageClosure)
+
+    /// Prefetches an image with the specified info.
+    func prefetching(of info: ImageInfo, completion: @escaping ImageClosure) -> AnyCancellable
+
+    /// Cancels the download for the specified image view.
     func cancel(for imageView: ImageView)
 }
 #else
+/// A protocol representing the behavior of downloading images asynchronously.
 public protocol ImageDownloading {
+    /// The image cache used for downloaded images.
     var imageCache: ImageCaching? { get }
 
+    /// Downloads an image with the specified info and sets it to the image view.
     func download(of info: ImageInfo,
                   for imageView: ImageView,
                   animated animation: ImageAnimation?,
                   placeholder: ImagePlaceholder,
                   completion: @escaping ImageClosure)
 
-    func download(of info: ImageInfo,
-                  completion: @escaping ImageClosure) -> AnyCancellable
-    func predownload(of info: ImageInfo,
-                     completion: @escaping ImageClosure)
+    /// Downloads an image with the specified info.
+    func download(of info: ImageInfo, completion: @escaping ImageClosure) -> AnyCancellable
 
+    /// Prefetches an image with the specified info.
+    func prefetch(of info: ImageInfo, completion: @escaping ImageClosure)
+
+    /// Prefetches an image with the specified info.
+    func prefetching(of info: ImageInfo, completion: @escaping ImageClosure) -> AnyCancellable
+
+    /// Cancels the download for the specified image view.
     func cancel(for imageView: ImageView)
 }
 #endif
 
 public extension ImageDownloading {
+    /// Downloads an image with the specified info.
     func download(of info: ImageInfo) -> AnyCancellable {
-        return download(of: info,
-                        completion: { _ in })
+        return download(of: info, completion: { _ in })
     }
 
-    func download(of info: ImageInfo,
+    /// Downloads an image with the specified info and sets it to the image view.
+    func download(ofInfo info: ImageInfo,
                   for imageView: ImageView,
-                  placeholder: ImagePlaceholder = .none) {
+                  animated animation: ImageAnimation? = nil,
+                  placeholder: ImagePlaceholder = .default,
+                  completion: ImageClosure? = nil) {
         download(of: info,
                  for: imageView,
                  animated: nil,
                  placeholder: placeholder,
-                 completion: { _ in })
+                 completion: completion ?? { _ in })
     }
 
-    func download(of info: ImageInfo,
-                  for imageView: ImageView,
-                  animated animation: ImageAnimation,
-                  placeholder: ImagePlaceholder = .none) {
-        download(of: info,
-                 for: imageView,
-                 animated: animation,
-                 placeholder: placeholder,
-                 completion: { _ in })
-    }
-
-    func download(of info: ImageInfo,
-                  for imageView: ImageView,
-                  placeholder: ImagePlaceholder = .none,
-                  completion: @escaping ImageClosure) {
-        download(of: info,
-                 for: imageView,
-                 animated: nil,
-                 placeholder: placeholder,
-                 completion: completion)
-    }
-
+    /// Downloads an image with URL and sets it to the image view.
     func download(url: URL,
-                  cachePolicy: URLRequest.CachePolicy = .useProtocolCachePolicy,
-                  timeoutInterval: TimeInterval = 60,
+                  cachePolicy: URLRequest.CachePolicy? = nil,
+                  timeoutInterval: TimeInterval? = nil,
                   processors: [ImageProcessor] = [],
                   priority: ImagePriority = .default,
                   completion: ImageClosure? = nil) -> AnyCancellable {
@@ -98,9 +96,10 @@ public extension ImageDownloading {
                         completion: completion ?? { _ in })
     }
 
+    /// Downloads an image with URL and sets it to the image view.
     func download(url: URL,
-                  cachePolicy: URLRequest.CachePolicy = .useProtocolCachePolicy,
-                  timeoutInterval: TimeInterval = 60,
+                  cachePolicy: URLRequest.CachePolicy? = nil,
+                  timeoutInterval: TimeInterval? = nil,
                   processors: [ImageProcessor] = [],
                   priority: ImagePriority = .default,
                   for imageView: ImageView,
@@ -119,23 +118,38 @@ public extension ImageDownloading {
                  completion: completion ?? { _ in })
     }
 
-    func predownload(of info: ImageInfo) {
-        predownload(of: info,
-                    completion: { _ in })
+    /// Prefetches an image with the specified info.
+    func prefetch(of info: ImageInfo) {
+        prefetch(of: info, completion: { _ in })
     }
 
-    func predownload(url: URL,
-                     cachePolicy: URLRequest.CachePolicy = .useProtocolCachePolicy,
-                     timeoutInterval: TimeInterval = 60,
-                     processors: [ImageProcessor] = [],
-                     priority: ImagePriority = .prefetch,
-                     completion: @escaping ImageClosure = { _ in }) {
+    /// Prefetches an image with the URL.
+    func prefetch(url: URL,
+                  cachePolicy: URLRequest.CachePolicy? = nil,
+                  timeoutInterval: TimeInterval? = nil,
+                  processors: [ImageProcessor] = [],
+                  priority: ImagePriority = .prefetch,
+                  completion: @escaping ImageClosure = { _ in }) {
         let info = ImageInfo(url: url,
                              cachePolicy: cachePolicy,
                              timeoutInterval: timeoutInterval,
                              processors: processors,
                              priority: priority)
-        predownload(of: info,
-                    completion: completion)
+        prefetch(of: info, completion: completion)
+    }
+
+    /// Prefetches an image with the URL.
+    func prefetching(url: URL,
+                     cachePolicy: URLRequest.CachePolicy? = nil,
+                     timeoutInterval: TimeInterval? = nil,
+                     processors: [ImageProcessor] = [],
+                     priority: ImagePriority = .prefetch,
+                     completion: @escaping ImageClosure = { _ in }) -> AnyCancellable {
+        let info = ImageInfo(url: url,
+                             cachePolicy: cachePolicy,
+                             timeoutInterval: timeoutInterval,
+                             processors: processors,
+                             priority: priority)
+        return prefetching(of: info, completion: completion)
     }
 }

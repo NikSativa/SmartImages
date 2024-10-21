@@ -37,8 +37,8 @@ internal final class ImageDownloadQueue {
     private let maxConcurrentOperationCount: Int
     private var isScheduled: Bool = false
 
-    init(concurrentImagesLimit limit: Int?,
-         operatioThreading: Queueable? = nil) {
+    /// The open interface `operatioThreading` is for testing purposes only.
+    init(concurrentImagesLimit limit: Int?, operatioThreading: Queueable? = nil) {
         self.operatioThreading = operatioThreading ?? Queue.custom(label: "ImageDownloadQueue.Operation",
                                                                    qos: .utility,
                                                                    attributes: .serial)
