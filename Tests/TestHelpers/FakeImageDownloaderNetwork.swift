@@ -8,18 +8,19 @@ public final class FakeImageDownloaderNetwork: ImageDownloaderNetwork, Spryable 
     }
 
     public enum Function: String, StringRepresentable {
-        case request = "request(with:cachePolicy:timeoutInterval:completion:)"
+        case request = "request(with:cachePolicy:timeoutInterval:completion:finishedOrCancelled:)"
     }
 
     public init() {}
 
     public var completion: ((Result<Data, Error>) -> Void)?
     public func request(with url: URL,
-                        cachePolicy: URLRequest.CachePolicy,
-                        timeoutInterval: TimeInterval,
-                        completion: @escaping (Result<Data, Error>) -> Void) -> ImageDownloaderTask {
+                        cachePolicy: URLRequest.CachePolicy?,
+                        timeoutInterval: TimeInterval?,
+                        completion: @escaping ResultCompletion,
+                        finishedOrCancelled finished: FinishedCompletion?) -> ImageDownloaderTask {
         self.completion = completion
-        return spryify(arguments: url, cachePolicy, timeoutInterval, completion)
+        return spryify(arguments: url, cachePolicy, timeoutInterval, completion, finished)
     }
 }
 

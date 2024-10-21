@@ -1,10 +1,12 @@
 import Foundation
 
 #if swift(>=6.0)
+/// Protocol to decode an image from a Data object
 public protocol ImageDecoding: Sendable {
     func decode(_ data: Data) -> Image?
 }
 #else
+/// Protocol to decode an image from a Data object
 public protocol ImageDecoding {
     func decode(_ data: Data) -> Image?
 }
@@ -16,6 +18,7 @@ public enum ImageDecoders {}
 // MARK: - ImageDecoders.Default
 
 public extension ImageDecoders {
+    /// Default `ImageDecoding` implementation
     struct Default: ImageDecoding {
         public init() {}
 
