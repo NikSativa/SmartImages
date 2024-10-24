@@ -173,8 +173,6 @@ private struct ImageDownloaderNetworkAdaptor: ImageDownloaderNetwork {
                                                 timeoutInterval: timeoutInterval ?? RequestSettings.timeoutInterval),
                                     inQueue: .absent,
                                     completion: completion)
-            .autorelease()
-            .deferredStart()
     }
 }
 ```
