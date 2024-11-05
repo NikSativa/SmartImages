@@ -47,7 +47,7 @@ public protocol ImageCaching {
 #endif
 
 internal final class ImageCache {
-    private let mutex: Mutexing = Mutex.pthread(.recursive)
+    private let mutex: Mutexing = AnyMutex.pthread(.recursive)
     internal let urlCache: URLCache
 
     init(info: ImageCacheInfo) {

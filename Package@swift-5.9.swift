@@ -16,8 +16,8 @@ let package = Package(
         .library(name: "SmartImages", targets: ["SmartImages"])
     ],
     dependencies: [
-        .package(url: "https://github.com/NikSativa/Threading.git", branch: "2.0.0"),
-        .package(url: "https://github.com/NikSativa/SpryKit.git", branch: "3.0.0")
+        .package(url: "https://github.com/NikSativa/Threading.git", branch: "2.1.0"),
+        .package(url: "https://github.com/NikSativa/SpryKit.git", branch: "3.0.1")
     ],
     targets: [
         .target(name: "SmartImages",
