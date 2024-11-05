@@ -29,7 +29,7 @@ internal protocol ImageDownloadQueueing {
 internal final class ImageDownloadQueue {
     typealias Priority = ImageDownloadQueuePriority
 
-    private let mutex: Mutexing = Mutex.pthread(.recursive)
+    private let mutex: Mutexing = AnyMutex.pthread(.recursive)
     private let operatioThreading: Queueable
 
     private var scheduledOperations: [Operation] = []

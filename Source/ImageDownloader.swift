@@ -28,7 +28,7 @@ public final class ImageDownloader {
         }
     }
 
-    private let mutex: Mutexing = Mutex.pthread(.recursive)
+    private let mutex: Mutexing = AnyMutex.pthread(.recursive)
     private let decodingQueue: DelayedQueue
     private var cacheViews: [URL: WeakViews] = [:]
     private var cacheClosures: [URL: [ClosureToken]] = [:]
@@ -235,8 +235,8 @@ public final class ImageDownloader {
                         animated animation: ImageAnimation?,
                         views: [WeakViews.InstanceStub],
                         closures: [ImageClosure]) {
-        let sendableImage = UnSendable(value: image)
-        let sendableClosures = UnSendable(value: closures)
+        let sendableImage = USendable(value: image)
+        let sendableClosures = USendable(value: closures)
         Queue.isolatedMain.sync {
             let image = sendableImage.value
             let closures = sendableClosures.value
@@ -254,7 +254,7 @@ public final class ImageDownloader {
         }
     }
 
-    private func needDownload(of info: ImageInfo, for imageView: UnSendable<ImageView>) -> Bool {
+    private func needDownload(of info: ImageInfo, for imageView: USendable<ImageView>) -> Bool {
         return Queue.isolatedMain.sync {
             if let cachePolicy = info.cachePolicy,
                cachePolicy.canUseCachedData,
@@ -303,7 +303,7 @@ extension ImageDownloader: ImageDownloading {
                          animated animation: ImageAnimation?,
                          placeholder: ImagePlaceholder,
                          completion: @escaping ImageClosure) {
-        let unsafeImageView: UnSendable<ImageView> = .init(imageView)
+        let unsafeImageView: USendable<ImageView> = .init(imageView)
 
         guard needDownload(of: info, for: unsafeImageView) else {
             return
@@ -438,7 +438,7 @@ private final class WeakViews {
 }
 
 private extension ImageView {
-    var unsendableImage: UnSendable<Image?> {
+    var unsendableImage: USendable<Image?> {
         return .init(value: image)
     }
 }
