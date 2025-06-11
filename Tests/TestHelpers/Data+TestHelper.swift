@@ -1,6 +1,5 @@
 import Foundation
 import SpryKit
-
 @testable import SmartImages
 
 extension Data {

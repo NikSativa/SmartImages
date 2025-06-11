@@ -1,7 +1,6 @@
 import Foundation
 import SpryKit
 import XCTest
-
 @testable import SmartImages
 
 final class ImageCacheTests: XCTestCase {

@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - "main"
+      - $default-branch
     paths:
       - ".github/workflows/**"
       - "Package.swift"
@@ -30,7 +31,11 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - xcode: "Xcode_16"
+          - xcode: "Xcode_16.3"
+            runsOn: macOS-15
+            swift: "6.1"
+            outputFilter: xcbeautify --renderer github-actions
+          - xcode: "Xcode_16.0"
             runsOn: macOS-15
             swift: "6.0"
             outputFilter: xcbeautify --renderer github-actions
@@ -42,12 +47,8 @@ jobs:
             runsOn: macOS-14
             swift: "5.9"
             outputFilter: xcbeautify --renderer github-actions
-          - xcode: "Xcode_14.3"
-            runsOn: macOS-13
-            swift: "5.8"
-            outputFilter: xcbeautify --renderer github-actions
     steps:
-      - uses: NeedleInAJayStack/setup-swift@feat/swift-6 # swift-actions/setup-swift@main
+      - uses: swift-actions/setup-swift@v2
         with:
           swift-version: ${{ matrix.swift }}
       - uses: actions/checkout@v4

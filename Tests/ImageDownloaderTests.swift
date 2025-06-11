@@ -3,7 +3,6 @@ import Foundation
 import SpryKit
 import Threading
 import XCTest
-
 @testable import SmartImages
 
 final class ImageDownloaderTests: XCTestCase, @unchecked Sendable {
