@@ -47,7 +47,7 @@ public protocol ImageCaching {
 #endif
 
 internal final class ImageCache {
-    private let mutex: Mutexing = AnyMutex.pthread(.recursive)
+    private let mutex: Locking = AnyLock.pthread(.recursive)
     internal let urlCache: URLCache
 
     init(info: ImageCacheInfo) {
@@ -61,13 +61,13 @@ internal final class ImageCache {
 
 extension ImageCache: ImageCaching {
     func cached(for key: URL) -> Data? {
-        return mutex.sync {
+        return mutex.syncUnchecked {
             return urlCache.cachedResponse(for: key.request)?.data
         }
     }
 
     func store(_ data: Data, for key: URL) {
-        return mutex.sync {
+        return mutex.syncUnchecked {
             let response = CachedURLResponse(response: .init(url: key,
                                                              mimeType: nil,
                                                              expectedContentLength: 0,
@@ -80,13 +80,13 @@ extension ImageCache: ImageCaching {
     }
 
     func remove(for key: URL) {
-        return mutex.sync {
+        return mutex.syncUnchecked {
             urlCache.removeCachedResponse(for: key.request)
         }
     }
 
     func removeAll() {
-        return mutex.sync {
+        return mutex.syncUnchecked {
             urlCache.removeAllCachedResponses()
         }
     }

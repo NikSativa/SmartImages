@@ -1,6 +1,5 @@
 import Foundation
 import SpryKit
-
 @testable import SmartImages
 
 final class FakeImageDownloadQueueing: ImageDownloadQueueing, Spryable {

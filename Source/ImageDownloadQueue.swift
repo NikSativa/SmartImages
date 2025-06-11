@@ -29,7 +29,7 @@ internal protocol ImageDownloadQueueing {
 internal final class ImageDownloadQueue {
     typealias Priority = ImageDownloadQueuePriority
 
-    private let mutex: Mutexing = AnyMutex.pthread(.recursive)
+    private let mutex: Locking = AnyLock.pthread(.recursive)
     private let operatioThreading: Queueable
 
     private var scheduledOperations: [Operation] = []
@@ -58,7 +58,7 @@ internal final class ImageDownloadQueue {
         operatioThreading.async { [weak self] in
             self?.checkQueue()
 
-            self?.mutex.sync {
+            self?.mutex.syncUnchecked {
                 self?.isScheduled = false
             }
         }
@@ -106,7 +106,7 @@ extension ImageDownloadQueue: ImageDownloadQueueing {
     func add(hash: AnyHashable,
              prioritizer: @escaping Prioritizer,
              starter: @escaping Starter) {
-        mutex.sync {
+        mutex.syncUnchecked {
             let operation = Operation(hash: hash, prioritizer: prioritizer, starter: starter)
             scheduledOperations.append(operation)
         }

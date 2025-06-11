@@ -10,7 +10,8 @@ internal extension Image {
         #endif
     }
 
-    @objc var sourceURL: URL? {
+    @objc
+    var sourceURL: URL? {
         get {
             return objc_getAssociatedObject(self, &AssociatedKeys.sourceURL) as? URL
         }

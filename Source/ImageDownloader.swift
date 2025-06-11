@@ -28,7 +28,7 @@ public final class ImageDownloader {
         }
     }
 
-    private let mutex: Mutexing = AnyMutex.pthread(.recursive)
+    private let mutex: Locking = AnyLock.pthread(.recursive)
     private let decodingQueue: DelayedQueue
     private var cacheViews: [URL: WeakViews] = [:]
     private var cacheClosures: [URL: [ClosureToken]] = [:]
@@ -95,7 +95,7 @@ public final class ImageDownloader {
     }
 
     private func add(_ url: URL, with completion: @escaping ImageClosure) -> ClosureToken {
-        return mutex.sync {
+        return mutex.syncUnchecked {
             let uniq = ClosureToken(closure: completion)
             var arr = cacheClosures[url] ?? []
             arr.append(uniq)
@@ -225,6 +225,7 @@ public final class ImageDownloader {
                 imageCache?.remove(for: url)
                 completion(nil)
             }
+
         case .failure:
             imageCache?.remove(for: url)
             completion(nil)
@@ -273,7 +274,7 @@ public final class ImageDownloader {
                 return
             }
 
-            mutex.sync { [uniq, url] in
+            mutex.syncUnchecked { [uniq, url] in
                 var arr = self.cacheClosures[url] ?? []
                 arr = arr.filter {
                     return uniq !== $0
