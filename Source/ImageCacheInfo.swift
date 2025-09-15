@@ -1,22 +1,38 @@
 import Foundation
 
-/// The ImageCacheInfo is configuration for URLCache which implements the caching of responses to URL load requests
+/// Configuration for image caching behavior using URLCache.
 ///
-/// - Parameters:
-///  - memoryCapacity: The memory capacity of the cache, in bytes. Default value is **40MB**. Minimum value is **10MB**
-///  - diskCapacity: The disk capacity of the cache, in bytes. Default value is **400MB**. Minimum value is **10MB**
-///  - directory: The path to an on-disk directory, where the system stores the on-disk cache. If directory is nil, the cache uses a default directory.
+/// `ImageCacheInfo` defines how downloaded images are cached in memory and on disk,
+/// providing control over cache size, storage location, and cleanup behavior.
+///
+/// ## Default Values
+/// - **Memory Cache**: 40MB (minimum 10MB)
+/// - **Disk Cache**: 400MB (minimum 10MB)
+/// - **Storage Location**: System cache directory
+///
+/// ## Usage Examples
+/// ```swift
+/// // Default configuration
+/// let cache = ImageCacheInfo(folderName: "MyAppImages")
+///
+/// // Custom sizes
+/// let cache = ImageCacheInfo(
+///     directory: customDirectory,
+///     memoryCapacity: 80 * 1024 * 1024,  // 80MB
+///     diskCapacity: 800 * 1024 * 1024     // 800MB
+/// )
+/// ```
 public struct ImageCacheInfo: Equatable {
     public let directory: URL
     public let memoryCapacity: Int
     public let diskCapacity: Int
 
-    /// Configuration for URLCache used for caching responses to URL load requests.
+    /// Creates a cache configuration with a specific directory and capacity settings.
     ///
     /// - Parameters:
-    ///    - directory: The directory URL for the cache.
-    ///    - memoryCapacity: The memory capacity of the cache in bytes. Default value is 40MB.
-    ///    - diskCapacity: The disk capacity of the cache in bytes.
+    ///   - directory: The directory URL where cached images will be stored.
+    ///   - memoryCapacity: Memory cache size in bytes. Defaults to 40MB, minimum 10MB.
+    ///   - diskCapacity: Disk cache size in bytes. Defaults to 400MB, minimum 10MB.
     public init(directory: URL,
                 memoryCapacity: Int? = nil,
                 diskCapacity: Int? = nil) {
@@ -25,13 +41,14 @@ public struct ImageCacheInfo: Equatable {
         self.diskCapacity = diskCapacity.recoverDiskCapacity
     }
 
-    /// Configuration for URLCache used for caching responses to URL load requests.
+    /// Creates a cache configuration using a folder name in the system cache directory.
+    ///
     /// - Parameters:
-    ///   - folderName: The name of the folder where the cache is stored.
-    ///   - searchPathDirectory: The search path directory. Default value is **.cachesDirectory**
-    ///   - searchPathDomainMask: The search path domain mask. Default value is **.userDomainMask**
-    ///   - memoryCapacity: The memory capacity of the cache, in bytes. Default value is **40MB**. Minimum value is **10MB**
-    ///   - diskCapacity: The disk capacity of the cache, in bytes. Default value is **400MB**. Minimum value is **10MB**
+    ///   - named: The name of the folder for cache storage. Defaults to "DownloadedImages".
+    ///   - searchPathDirectory: The search path directory for cache storage. Defaults to `.cachesDirectory`.
+    ///   - searchPathDomainMask: The search path domain mask. Defaults to `.userDomainMask`.
+    ///   - memoryCapacity: Memory cache size in bytes. Defaults to 40MB, minimum 10MB.
+    ///   - diskCapacity: Disk cache size in bytes. Defaults to 400MB, minimum 10MB.
     public init?(folderName named: String = "DownloadedImages",
                  searchPathDirectory: FileManager.SearchPathDirectory = .cachesDirectory,
                  searchPathDomainMask: FileManager.SearchPathDomainMask = .userDomainMask,

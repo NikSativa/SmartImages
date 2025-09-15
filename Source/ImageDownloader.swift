@@ -10,15 +10,40 @@ import Cocoa
 #error("unsupported os")
 #endif
 
-/// The ImageDownloader class is a final class in Swift designed for downloading and managing image resources.
-/// It conforms to the ImageDownloading protocol and provides functionalities for handling image download tasks efficiently.
-/// With properties for network implementation, image decoding processor, download queue management, and image caching,
-/// the ImageDownloader class offers a comprehensive solution for handling image-related operations.
-/// The class encapsulates methods for adding images to views, managing closures, checking cached images,
-/// scheduling downloads, and handling loaded images. Additionally, it includes internal initializers for testing purposes and
-/// implements the ImageDownloading protocol.
-/// The ImageDownloader class serves as a crucial component for handling image downloads within the system,
-/// facilitating smooth image loading and processing operations
+public enum ImageDownloaderError: Error {
+    case decodingFailed
+}
+
+/// A powerful and flexible image downloader that provides intelligent image loading with prioritization, caching, and processing capabilities.
+///
+/// `ImageDownloader` is the main class for downloading and managing image resources in SmartImages. It coordinates
+/// networking, caching, decoding, and queuing operations to provide efficient image loading with minimal setup.
+///
+/// ## Key Features
+/// - **Intelligent Prioritization**: Images with visible image views are prioritized over background downloads
+/// - **Efficient Caching**: Built-in memory and disk caching with configurable limits
+/// - **Concurrent Downloads**: Configurable concurrent download limits for optimal performance
+/// - **Image Processing**: Support for custom image processors (resizing, cropping, etc.)
+/// - **Thread-Safe**: All operations are thread-safe and can be used from any queue
+///
+/// ## Basic Usage
+/// ```swift
+/// let downloader = ImageDownloader(
+///     network: ImageDownloaderNetworkAdaptor(),
+///     cache: ImageCacheInfo(folderName: "MyImages"),
+///     concurrentLimit: 6
+/// )
+///
+/// downloader.download(of: ImageInfo(url: imageURL), completion: { image in
+///     // Handle loaded image
+/// })
+/// ```
+///
+/// ## Customization
+/// - Provide custom networking implementations via `ImageDownloaderNetwork`
+/// - Configure caching behavior with `ImageCacheInfo`
+/// - Add custom image processors for transformations
+/// - Set download priorities and concurrency limits
 public final class ImageDownloader {
     private final class ClosureToken {
         let closure: ImageClosure
@@ -33,7 +58,7 @@ public final class ImageDownloader {
     private var cacheViews: [URL: WeakViews] = [:]
     private var cacheClosures: [URL: [ClosureToken]] = [:]
     private var cacheInfos: [URL: ImageInfo] = [:]
-    private var cacheActiveTasks: [URL: any Cancellable] = [:]
+    private var cacheActiveTasks: [URL: ImageDownloaderTask] = [:]
 
     /// The network implementation used for downloading images.
     private let network: ImageDownloaderNetwork
@@ -44,13 +69,15 @@ public final class ImageDownloader {
     /// The cache implementation for storing downloaded images.
     public let imageCache: ImageCaching?
 
-    /// Initializes an `ImageDownloader` instance with specified parameters.
+    /// Creates a new `ImageDownloader` instance with the specified configuration.
+    ///
     /// - Parameters:
-    ///   - network: The network implementation for image downloading.
-    ///   - cache: Optional image cache information.
-    ///   - decoders: Array of image decoding processors, defaulting to `[ImageDecoders.Default()]`. As result of decoding `ImageDownloader` will the first successful decoded image.
-    ///   - decodingQueue: Queue for managing image decoding operations, defaulting to `.absent`. If the queue is absent, the decoding will be performed synchronously with `ImageDownloaderNetwork`.
-    ///   - concurrentLimit: Limitation for concurrent image downloads. If the limit is `nil` then it's unlimited.
+    ///   - network: The network implementation for downloading images. Required for all download operations.
+    ///   - cache: Optional cache configuration for storing downloaded images. If `nil`, no caching will be performed.
+    ///   - decoders: Array of image decoders to use for processing downloaded data. Defaults to `[ImageDecoders.Default()]`.
+    ///     The first decoder that successfully processes the data will be used.
+    ///   - decodingQueue: Queue for image decoding operations. If `.absent`, decoding happens synchronously with networking.
+    ///   - limit: Maximum number of concurrent downloads. If `nil`, downloads are unlimited (use with caution).
     public required init(network: ImageDownloaderNetwork,
                          cache: ImageCacheInfo? = nil,
                          decoders: [ImageDecoding] = [],
@@ -76,19 +103,19 @@ public final class ImageDownloader {
         self.decodingQueue = decodingQueue
     }
 
-    private func add(_ imageView: ImageView, for url: URL, completion: @escaping ImageClosure) {
+    private func add(_ holder: USendable<ImageDownloading.ImageReference>, for url: URL, completion: @escaping ImageClosure) {
         mutex.sync {
             cacheViews = cacheViews.filter { _, views in
-                views.remove(imageView)
+                views.remove(holder.value)
                 views.filterNils()
                 return !views.isEmpty
             }
 
             if let container = cacheViews[url] {
-                container.add(imageView, completion: completion)
+                container.add(holder.value, completion: completion)
             } else {
                 let container: WeakViews = .init()
-                container.add(imageView, completion: completion)
+                container.add(holder.value, completion: completion)
                 cacheViews[url] = container
             }
         }
@@ -172,11 +199,6 @@ public final class ImageDownloader {
                                            decodingQueue.fire { [self] in
                                                handleLoaded(result, animated: animation, for: url)
                                            }
-                                       },
-                                       finishedOrCancelled: { [self] in
-                                           mutex.sync {
-                                               cacheActiveTasks[url] = nil
-                                           }
                                        })
 
             mutex.sync {
@@ -198,15 +220,15 @@ public final class ImageDownloader {
 
             let views = (cacheViews[url]?.cached ?? []).map {
                 return WeakViews.InstanceStub(completion: $0.completion,
-                                              view: $0.view())
+                                              holder: $0.view())
             }
             let closures = (cacheClosures[url] ?? []).map(\.closure)
             return (cacheInfos[url], views, closures)
         }
 
-        let completion: ImageClosure = { [self, url] image in
-            image?.sourceURL = url
-            handle(image,
+        let completion: ImageClosure = { [self, url] result in
+            result.sourceURL = url
+            handle(result,
                    animated: animation,
                    views: views,
                    closures: closures)
@@ -220,46 +242,47 @@ public final class ImageDownloader {
 
                 let processor = ImageProcessors.Composition(processors: info?.processors ?? [])
                 let processedImage = processor.process(image)
-                completion(processedImage)
+                completion(.success(processedImage))
             } else {
                 imageCache?.remove(for: url)
-                completion(nil)
+                completion(.failure(ImageDownloaderError.decodingFailed))
             }
 
-        case .failure:
+        case .failure(let error):
             imageCache?.remove(for: url)
-            completion(nil)
+            completion(.failure(error))
         }
     }
 
-    private func handle(_ image: Image?,
+    private func handle(_ image: Result<Image, Error>,
                         animated animation: ImageAnimation?,
                         views: [WeakViews.InstanceStub],
                         closures: [ImageClosure]) {
         let sendableImage = USendable(value: image)
         let sendableClosures = USendable(value: closures)
         Queue.isolatedMain.sync {
-            let image = sendableImage.value
+            let result = sendableImage.value
             let closures = sendableClosures.value
 
             for cached in views {
-                if let view = cached.view {
-                    animation.animate(view, image: image)
+                if let view = cached.holder as? ImageView {
+                    animation.animate(view, image: result.image)
                 }
-                cached.completion(image)
+                cached.completion(result)
             }
 
             for cl in closures {
-                cl(image)
+                cl(result)
             }
         }
     }
 
-    private func needDownload(of info: ImageInfo, for imageView: USendable<ImageView>) -> Bool {
+    private func needDownload(of info: ImageInfo, for holder: USendable<ImageDownloading.ImageReference>) -> Bool {
         return Queue.isolatedMain.sync {
-            if let cachePolicy = info.cachePolicy,
+            if let imageView = holder.value as? ImageView,
+               let cachePolicy = info.cachePolicy,
                cachePolicy.canUseCachedData,
-               let image = imageView.value.image,
+               let image = imageView.image,
                let currentSourceURL = image.sourceURL,
                currentSourceURL == info.url {
                 return false
@@ -300,21 +323,23 @@ public final class ImageDownloader {
 
 extension ImageDownloader: ImageDownloading {
     public func download(of info: ImageInfo,
-                         for imageView: ImageView,
+                         for reference: ImageDownloading.ImageReference,
                          animated animation: ImageAnimation?,
                          placeholder: ImagePlaceholder,
                          completion: @escaping ImageClosure) {
-        let unsafeImageView: USendable<ImageView> = .init(imageView)
+        let unsafeReference: USendable = .init(reference)
 
-        guard needDownload(of: info, for: unsafeImageView) else {
+        guard needDownload(of: info, for: unsafeReference) else {
             return
         }
 
-        Queue.isolatedMain.sync {
-            unsafeImageView.value.setPlaceholder(placeholder)
+        if let imageView = reference as? ImageView {
+            Queue.isolatedMain.sync {
+                imageView.setPlaceholder(placeholder)
+            }
         }
 
-        add(imageView, for: info.url, completion: completion)
+        add(unsafeReference, for: info.url, completion: completion)
         addInfoIfNeeded(info)
         scheduleDownload(of: info, animated: animation)
     }
@@ -346,10 +371,11 @@ extension ImageDownloader: ImageDownloading {
         scheduleDownload(of: info, animated: nil)
     }
 
-    public func cancel(for imageView: ImageView) {
+    public func cancel(for reference: ImageDownloading.ImageReference) {
+        let unsafeImageView: USendable = .init(reference)
         mutex.sync {
             cacheViews = cacheViews.filter { _, views in
-                views.remove(imageView)
+                views.remove(unsafeImageView.value)
                 views.filterNils()
                 return !views.isEmpty
             }
@@ -400,13 +426,13 @@ private extension ImageAnimation? {
 private final class WeakViews {
     struct Stub {
         let completion: ImageClosure
-        let view: () -> ImageView?
+        let view: () -> ImageDownloading.ImageReference?
     }
 
     /// used to instantiate and retain ImageView from Stub and then to run on main queue
     struct InstanceStub {
         let completion: ImageClosure
-        let view: ImageView?
+        let holder: ImageDownloading.ImageReference?
     }
 
     private(set) var cached: [Stub] = []
@@ -415,14 +441,14 @@ private final class WeakViews {
         return cached.isEmpty
     }
 
-    func add(_ imageView: ImageView, completion: @escaping ImageClosure) {
+    func add(_ imageView: ImageDownloading.ImageReference, completion: @escaping ImageClosure) {
         let stub: Stub = .init(completion: completion) { [weak imageView] in
             return imageView
         }
         cached.append(stub)
     }
 
-    func remove(_ imageView: ImageView) {
+    func remove(_ imageView: ImageDownloading.ImageReference) {
         cached = cached.filter {
             if let cached = $0.view() {
                 return cached !== imageView
@@ -444,10 +470,32 @@ private extension ImageView {
     }
 }
 
+private extension Result<Image, Error> {
+    var image: Image? {
+        switch self {
+        case .success(let image):
+            return image
+        case .failure:
+            return nil
+        }
+    }
+}
+
+private extension Result<Image, Error> {
+    var sourceURL: URL? {
+        get {
+            return image?.sourceURL
+        }
+        nonmutating set {
+            image?.sourceURL = newValue
+        }
+    }
+}
+
 #if swift(>=6.0)
 extension ImageDownloader: @unchecked Sendable {}
 
 extension WeakViews: @unchecked Sendable {}
 extension WeakViews.Stub: @unchecked Sendable {}
-extension WeakViews.InstanceStub: Sendable {}
+extension WeakViews.InstanceStub: @unchecked Sendable {}
 #endif

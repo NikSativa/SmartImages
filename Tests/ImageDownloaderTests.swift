@@ -43,7 +43,7 @@ final class ImageDownloaderTests: XCTestCase, @unchecked Sendable {
     func test_download_url_success() {
         let expImage = expectation(description: "wait image")
         token = subject.download(url: .testMake("google.com/\(1)")) { img in
-            XCTAssertEqualImage(img, .spry.testImage4)
+            XCTAssertEqualImage(img.image, .spry.testImage4)
             expImage.fulfill()
         }
 
@@ -140,7 +140,7 @@ final class ImageDownloaderTests: XCTestCase, @unchecked Sendable {
             let expLoading = expectation(description: "wait \(i) loading")
             expsLoading.value.append(expLoading)
 
-            network.stub(.request).with(url, Argument.nil, Argument.nil, Argument.closure, Argument.closure).andDo { args in
+            network.stub(.request).with(url, Argument.nil, Argument.nil, Argument.closure).andDo { args in
                 let completion = SendableResult(value: args[3] as? ImageDownloaderNetwork.ResultCompletion)
                 if i < limit / 2 {
                     Queue.main.asyncAfter(deadline: .now() + rands()) {
@@ -168,9 +168,9 @@ final class ImageDownloaderTests: XCTestCase, @unchecked Sendable {
 
             subject.download(url: url) { img in
                 if i < limit / 2 {
-                    XCTAssertEqualImage(img, .spry.testImage4)
+                    XCTAssertEqualImage(img.image, .spry.testImage4)
                 } else {
-                    XCTAssertNil(img)
+                    XCTAssertEqual(img.error, URLError(URLError.Code.badServerResponse) as NSError)
                 }
                 expResult.fulfill()
             }.store(in: &tokens)
@@ -181,5 +181,25 @@ final class ImageDownloaderTests: XCTestCase, @unchecked Sendable {
         // should not call cancel
         // try to make 'timeout: 10' to by sure that every task was finished correctly
         tokens = []
+    }
+}
+
+private extension Result<Image, Error> {
+    var error: NSError? {
+        switch self {
+        case .success:
+            return nil
+        case .failure(let error):
+            return error as NSError
+        }
+    }
+
+    var image: Image? {
+        switch self {
+        case .success(let image):
+            return image
+        case .failure:
+            return nil
+        }
     }
 }

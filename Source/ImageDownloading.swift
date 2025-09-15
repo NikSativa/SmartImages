@@ -12,12 +12,17 @@ import Cocoa
 #if swift(>=6.0)
 /// A protocol representing the behavior of downloading images asynchronously.
 public protocol ImageDownloading: Sendable {
+    /// any object when referencing the downloading task
+    /// at UIKit can be UIImageView
+    /// at SwiftUI can be ImageReference `@State var reference: ImageReference = .init()`
+    typealias ImageReference = AnyObject
+
     /// The image cache used for downloaded images.
     var imageCache: ImageCaching? { get }
 
     /// Downloads an image with the specified info and sets it to the image view.
     func download(of info: ImageInfo,
-                  for imageView: ImageView,
+                  for reference: ImageReference,
                   animated animation: ImageAnimation?,
                   placeholder: ImagePlaceholder,
                   completion: @escaping ImageClosure)
@@ -32,17 +37,22 @@ public protocol ImageDownloading: Sendable {
     func prefetching(of info: ImageInfo, completion: @escaping ImageClosure) -> AnyCancellable
 
     /// Cancels the download for the specified image view.
-    func cancel(for imageView: ImageView)
+    func cancel(for reference: ImageReference)
 }
 #else
 /// A protocol representing the behavior of downloading images asynchronously.
 public protocol ImageDownloading {
+    /// any object when referencing the downloading task
+    /// at UIKit can be UIImageView
+    /// at SwiftUI can be ImageReference `@State var reference: ImageReference = .init()`
+    typealias ImageReference = AnyObject
+
     /// The image cache used for downloaded images.
     var imageCache: ImageCaching? { get }
 
     /// Downloads an image with the specified info and sets it to the image view.
     func download(of info: ImageInfo,
-                  for imageView: ImageView,
+                  for reference: ImageReference,
                   animated animation: ImageAnimation?,
                   placeholder: ImagePlaceholder,
                   completion: @escaping ImageClosure)
@@ -57,7 +67,7 @@ public protocol ImageDownloading {
     func prefetching(of info: ImageInfo, completion: @escaping ImageClosure) -> AnyCancellable
 
     /// Cancels the download for the specified image view.
-    func cancel(for imageView: ImageView)
+    func cancel(for reference: ImageReference)
 }
 #endif
 
