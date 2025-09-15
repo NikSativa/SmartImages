@@ -8,7 +8,28 @@ import Cocoa
 #error("unsupported os")
 #endif
 
-/// A enum representing the placeholder of an image view while loading the image. If the request fails, a placeholder will be shown..
+/// Represents the placeholder content to display in an image view while loading or when loading fails.
+///
+/// `ImagePlaceholder` provides various options for showing placeholder content during image loading,
+/// including static images, named images, custom implementations, or no placeholder at all.
+///
+/// ## Usage Examples
+/// ```swift
+/// // Use a static image
+/// let placeholder = ImagePlaceholder.image(UIImage(systemName: "photo")!)
+///
+/// // Use a named image from bundle
+/// let placeholder = ImagePlaceholder.imageNamed("placeholder")
+///
+/// // Clear the current image
+/// let placeholder = ImagePlaceholder.clear
+///
+/// // Custom placeholder implementation
+/// let placeholder = ImagePlaceholder.custom { imageView in
+///     imageView.backgroundColor = .gray
+///     imageView.contentMode = .center
+/// }
+/// ```
 public enum ImagePlaceholder {
     #if swift(>=6.0)
     public typealias CustomSetter = @MainActor (ImageView) -> Void

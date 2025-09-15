@@ -10,7 +10,12 @@ import Cocoa
 #endif
 
 public extension ImageView {
-    // Sets the placeholder for the image view. `public` access level is to allow use this method in your custom Animations or Placeholders.
+    // Sets the placeholder content for the image view.
+    //
+    // This method applies the specified placeholder to the image view, which is typically
+    // called before starting an image download to show loading state or fallback content.
+    //
+    // - Parameter placeholder: The placeholder to display in the image view.
     #if swift(>=6.0)
     @MainActor
     #endif

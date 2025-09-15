@@ -1,12 +1,33 @@
 import Foundation
 import Threading
 
+#if canImport(SwiftUI)
+import SwiftUI
+
+/// A reference holder for SwiftUI environments where image downloads need to be managed.
+///
+/// `ImageDownloadReference` provides a way to maintain download task lifecycle in SwiftUI contexts
+/// where traditional view references might not be available.
+public final class ImageDownloadReference {
+    /// Creates a new image download reference instance.
+    public init() {}
+}
+#endif
+
 #if swift(>=6.0)
 internal typealias VoidClosure = @Sendable () -> Void
-public typealias ImageClosure = @Sendable (Image?) -> Void
+/// A closure type for handling image download completion.
+///
+/// `ImageClosure` is called when an image download completes, providing either
+/// the loaded image or `nil` if the download failed.
+public typealias ImageClosure = @Sendable (Result<Image, Error>) -> Void
 #else
 internal typealias VoidClosure = () -> Void
-public typealias ImageClosure = (Image?) -> Void
+/// A closure type for handling image download completion.
+///
+/// `ImageClosure` is called when an image download completes, providing either
+/// the loaded image or `nil` if the download failed.
+public typealias ImageClosure = (Result<Image, Error>) -> Void
 #endif
 
 #if os(iOS) || os(tvOS) || supportsVisionOS
@@ -24,15 +45,9 @@ import SwiftUI
 
 public typealias Image = UIImage
 
-#if swift(>=6.0)
 public protocol ImageView: AnyObject, Sendable {
     var image: Image? { get set }
 }
-#else
-public protocol ImageView: AnyObject {
-    var image: Image? { get set }
-}
-#endif
 
 #else
 #error("unsupported os")
@@ -40,44 +55,34 @@ public protocol ImageView: AnyObject {
 
 #if os(iOS) || os(tvOS)
 private enum Screen {
-    #if swift(>=6.0)
     @MainActor
     static var scale: CGFloat {
         return UIScreen.main.scale
     }
-    #else
-    static var scale: CGFloat {
-        return UIScreen.main.scale
-    }
-    #endif
 }
 
 #elseif os(watchOS)
 import WatchKit
 
 private enum Screen {
-    #if swift(>=6.0)
     @MainActor
     static var scale: CGFloat {
         return WKInterfaceDevice.current().screenScale
     }
-    #else
-    static var scale: CGFloat {
-        return WKInterfaceDevice.current().screenScale
-    }
-    #endif
 }
 
 #elseif supportsVisionOS
+/// Screen utilities for visionOS platform.
+///
+/// `Screen` provides screen scale information for visionOS, where traditional screen scale
+/// concepts don't apply. You can override the scale value for testing purposes.
 public enum Screen {
-    // visionOS doesn't have a screen scale, so we'll just use 2x for Tests.
-    // override it on your own risk.
-    #if swift(>=6.0)
+    /// The screen scale factor for visionOS.
+    ///
+    /// visionOS doesn't have a traditional screen scale, so this defaults to `nil`.
+    /// You can override this value for testing purposes, but use with caution.
     @MainActor
     public static var scale: CGFloat?
-    #else
-    public static var scale: CGFloat?
-    #endif
 }
 #endif
 
