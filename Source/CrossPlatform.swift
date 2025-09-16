@@ -73,7 +73,6 @@ private enum Screen {
     static var scale: CGFloat {
         return WKInterfaceDevice.current().screenScale
     }
-
 }
 
 #elseif supportsVisionOS
@@ -82,11 +81,13 @@ private enum Screen {
 /// `Screen` provides screen scale information for visionOS, where traditional screen scale
 /// concepts don't apply. You can override the scale value for testing purposes.
 public enum Screen {
-    /// The screen scale factor for visionOS.
-    ///
-    /// visionOS doesn't have a traditional screen scale, so this defaults to `nil`.
-    /// You can override this value for testing purposes, but use with caution.
+    // The screen scale factor for visionOS.
+    //
+    // visionOS doesn't have a traditional screen scale, so this defaults to `nil`.
+    // You can override this value for testing purposes, but use with caution.
+    #if swift(>=6.0)
     @MainActor
+    #endif
     public static var scale: CGFloat?
 }
 #endif
@@ -129,10 +130,6 @@ internal struct PlatformImage {
         return sdk.pngData()
     }
 
-    func jpegData(compressionQuality: CGFloat) -> Data? {
-        return sdk.jpegData(compressionQuality: CGFloat(compressionQuality))
-    }
-
     #elseif os(iOS) || os(tvOS) || os(watchOS)
     init?(data: Data) {
         let scale = Queue.isolatedMain.sync { Screen.scale }
@@ -146,10 +143,6 @@ internal struct PlatformImage {
 
     func pngData() -> Data? {
         return sdk.pngData()
-    }
-
-    func jpegData(compressionQuality: CGFloat) -> Data? {
-        return sdk.jpegData(compressionQuality: CGFloat(compressionQuality))
     }
     #else
     #error("unsupported os")

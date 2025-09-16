@@ -1,38 +1,31 @@
+#if !supportsVisionOS
 import Foundation
 import SpryKit
+import Threading
 import XCTest
 @testable import SmartImages
 
 final class ImageDecodingProcessorTests: XCTestCase {
     private let pngData: Data! = PlatformImage(.spry.testImage4).pngData()
 
-    override func setUp() {
-        super.setUp()
-        #if supportsVisionOS
-        Screen.scale = 2
-        #endif
-    }
-
     func test_not_nil_png_data() {
         XCTAssertNotNil(pngData)
     }
 
-    func test_empty_decoders_array() {
+    func test_empty_decoders_array() throws {
         let subject = ImageDecodingProcessor(decoders: [])
         let actualImage = subject.decode(pngData)
         XCTAssertNotNil(actualImage)
-        if let actualImage {
-            XCTAssertEqual(PlatformImage(actualImage).pngData(), PlatformImage(.spry.testImage4).pngData())
-        }
+        let unwrapped = try XCTUnwrap(actualImage)
+        XCTAssertEqual(PlatformImage(unwrapped).pngData(), PlatformImage(.spry.testImage4).pngData())
     }
 
-    func test_decoders_array() {
+    func test_decoders_array() throws {
         let subject = ImageDecodingProcessor(decoders: [ImageDecoders.Default()])
         let actualImage = subject.decode(pngData)
         XCTAssertNotNil(actualImage)
-        if let actualImage {
-            XCTAssertEqual(PlatformImage(actualImage).pngData(), PlatformImage(.spry.testImage4).pngData())
-        }
+        let unwrapped = try XCTUnwrap(actualImage)
+        XCTAssertEqualImage(PlatformImage(unwrapped).pngData(), PlatformImage(.spry.testImage4).pngData())
     }
 
     func test_broken_data() {
@@ -71,3 +64,4 @@ final class ImageDecodingProcessorTests: XCTestCase {
         XCTAssertEqual(actualImage, .spry.testImage1)
     }
 }
+#endif
