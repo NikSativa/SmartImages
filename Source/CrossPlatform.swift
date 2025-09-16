@@ -55,7 +55,9 @@ public protocol ImageView: AnyObject, Sendable {
 
 #if os(iOS) || os(tvOS)
 private enum Screen {
+    #if swift(>=6.0)
     @MainActor
+    #endif
     static var scale: CGFloat {
         return UIScreen.main.scale
     }
@@ -65,10 +67,13 @@ private enum Screen {
 import WatchKit
 
 private enum Screen {
+    #if swift(>=6.0)
     @MainActor
+    #endif
     static var scale: CGFloat {
         return WKInterfaceDevice.current().screenScale
     }
+
 }
 
 #elseif supportsVisionOS
