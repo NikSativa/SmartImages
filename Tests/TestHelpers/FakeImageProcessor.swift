@@ -13,7 +13,7 @@ public final class FakeImageProcessor: ImageProcessor, Spryable {
 
     public init() {}
 
-    public func process(_ image: Image) -> Image {
+    public func process(_ image: SmartImage) -> SmartImage {
         return spryify(arguments: image)
     }
 }

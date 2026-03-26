@@ -5,7 +5,7 @@ import XCTest
 
 final class Image_NetworkTests: XCTestCase {
     func test_sourceURL() {
-        let subject = Image()
+        let subject = SmartImage()
         XCTAssertNil(subject.sourceURL)
 
         subject.sourceURL = .testMake("google.com/11")

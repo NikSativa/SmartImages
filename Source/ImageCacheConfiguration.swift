@@ -2,7 +2,7 @@ import Foundation
 
 /// Configuration for image caching behavior using URLCache.
 ///
-/// `ImageCacheInfo` defines how downloaded images are cached in memory and on disk,
+/// `ImageCacheConfiguration` defines how downloaded images are cached in memory and on disk,
 /// providing control over cache size, storage location, and cleanup behavior.
 ///
 /// ## Default Values
@@ -13,16 +13,16 @@ import Foundation
 /// ## Usage Examples
 /// ```swift
 /// // Default configuration
-/// let cache = ImageCacheInfo(folderName: "MyAppImages")
+/// let cache = ImageCacheConfiguration(folderName: "MyAppImages")
 ///
 /// // Custom sizes
-/// let cache = ImageCacheInfo(
+/// let cache = ImageCacheConfiguration(
 ///     directory: customDirectory,
 ///     memoryCapacity: 80 * 1024 * 1024,  // 80MB
 ///     diskCapacity: 800 * 1024 * 1024     // 800MB
 /// )
 /// ```
-public struct ImageCacheInfo: Equatable {
+public struct ImageCacheConfiguration: Equatable {
     public let directory: URL
     public let memoryCapacity: Int
     public let diskCapacity: Int
@@ -87,5 +87,5 @@ private extension Int? {
 }
 
 #if swift(>=6.0)
-extension ImageCacheInfo: Sendable {}
+extension ImageCacheConfiguration: Sendable {}
 #endif

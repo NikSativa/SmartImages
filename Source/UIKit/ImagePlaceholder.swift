@@ -1,4 +1,5 @@
 import Foundation
+import SmartImages
 
 #if os(iOS) || os(tvOS) || supportsVisionOS || os(watchOS)
 import UIKit
@@ -32,10 +33,10 @@ import Cocoa
 /// ```
 public enum ImagePlaceholder {
     #if swift(>=6.0)
-    public typealias CustomSetter = @MainActor (ImageView) -> Void
+    public typealias CustomSetter = @MainActor (SmartImageView) -> Void
     public nonisolated(unsafe) static var `default`: Self = .none
     #else
-    public typealias CustomSetter = (ImageView) -> Void
+    public typealias CustomSetter = (SmartImageView) -> Void
     public static var `default`: Self = .none
     #endif
 
@@ -44,7 +45,7 @@ public enum ImagePlaceholder {
     /// Clears the image view
     case clear
     /// A placeholder that shows an image which will be replaced by the downloaded image.
-    case image(Image)
+    case image(SmartImage)
     /// Custom placeholder that allows you to set the image view with your own implementation
     case custom(CustomSetter)
 
@@ -73,13 +74,13 @@ public enum ImagePlaceholder {
     @available(iOS 17.0, macOS 14.0, tvOS 17.0, *)
     public init(resource res: ImageResource) {
         self = .custom { view in
-            view.image = Image(resource: res)
+            view.image = SmartImage(resource: res)
         }
     }
     #endif
 
     /// A placeholder that shows an image which will be replaced by the downloaded image.
-    public init(_ image: Image?) {
+    public init(_ image: SmartImage?) {
         self = image.map(Self.image) ?? .clear
     }
 }

@@ -6,52 +6,52 @@ import Threading
 ///
 /// `ImageProcessor` allows you to transform images before they are displayed, such as resizing,
 /// cropping, applying filters, or any other image manipulation. Processors are applied in the
-/// order they are provided in the `ImageInfo.processors` array.
+/// order they are provided in the `ImageRequest.processors` array.
 ///
 /// ## Usage Example
 /// ```swift
 /// struct ResizeProcessor: ImageProcessor {
 ///     let targetSize: CGSize
 ///
-///     func process(_ image: Image) -> Image {
+///     func process(_ image: SmartImage) -> SmartImage {
 ///         // Resize image to target size
 ///         return resizedImage
 ///     }
 /// }
 ///
-/// let info = ImageInfo(
+/// let info = ImageRequest(
 ///     url: imageURL,
 ///     processors: [ResizeProcessor(targetSize: CGSize(width: 200, height: 200))]
 /// )
 /// ```
 public protocol ImageProcessor: Sendable {
-    func process(_ image: Image) -> Image
+    func process(_ image: SmartImage) -> SmartImage
 }
 #else
 /// Protocol for processing images during download and decode operations.
 ///
 /// `ImageProcessor` allows you to transform images before they are displayed, such as resizing,
 /// cropping, applying filters, or any other image manipulation. Processors are applied in the
-/// order they are provided in the `ImageInfo.processors` array.
+/// order they are provided in the `ImageRequest.processors` array.
 ///
 /// ## Usage Example
 /// ```swift
 /// struct ResizeProcessor: ImageProcessor {
 ///     let targetSize: CGSize
 ///
-///     func process(_ image: Image) -> Image {
+///     func process(_ image: SmartImage) -> SmartImage {
 ///         // Resize image to target size
 ///         return resizedImage
 ///     }
 /// }
 ///
-/// let info = ImageInfo(
+/// let info = ImageRequest(
 ///     url: imageURL,
 ///     processors: [ResizeProcessor(targetSize: CGSize(width: 200, height: 200))]
 /// )
 /// ```
 public protocol ImageProcessor {
-    func process(_ image: Image) -> Image
+    func process(_ image: SmartImage) -> SmartImage
 }
 #endif
 
@@ -93,7 +93,7 @@ public extension ImageProcessors {
 // MARK: - ImageProcessors.Composition + ImageProcessor
 
 extension ImageProcessors.Composition: ImageProcessor {
-    public func process(_ image: Image) -> Image {
+    public func process(_ image: SmartImage) -> SmartImage {
         if !processors.isEmpty {
             return processors.reduce(image) {
                 return $1.process($0)
@@ -103,3 +103,7 @@ extension ImageProcessors.Composition: ImageProcessor {
         return image
     }
 }
+
+#if swift(>=6.0)
+extension ImageProcessors.Composition: @unchecked Sendable {}
+#endif

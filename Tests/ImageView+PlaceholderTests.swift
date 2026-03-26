@@ -1,5 +1,6 @@
 import Foundation
 import SmartImages
+import SmartImagesUIKit
 import SpryKit
 import XCTest
 
@@ -8,7 +9,7 @@ final class ImageView_PlaceholderTests: XCTestCase {
     @MainActor
     #endif
     func test_placeholder() {
-        let subject = ImageView()
+        let subject = SmartImageView()
         XCTAssertNil(subject.image)
 
         subject.setPlaceholder(.image(.spry.testImage1))
@@ -36,7 +37,7 @@ final class ImageView_PlaceholderTests: XCTestCase {
 }
 
 #if os(watchOS)
-private final class ImageView: SmartImages.ImageView {
-    var image: Image?
+private final class SmartImageView: SmartImages.SmartImageView, @unchecked Sendable {
+    var image: SmartImage?
 }
 #endif

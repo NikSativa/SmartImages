@@ -2,7 +2,7 @@ import Foundation
 import SmartImages
 import SpryKit
 
-public final class FakeImageDownloaderNetwork: ImageDownloaderNetwork, Spryable {
+public final class FakeImageNetworkProvider: ImageNetworkProvider, Spryable {
     public enum ClassFunction: String, StringRepresentable {
         case empty
     }
@@ -17,12 +17,12 @@ public final class FakeImageDownloaderNetwork: ImageDownloaderNetwork, Spryable 
     public func request(with url: URL,
                         cachePolicy: URLRequest.CachePolicy?,
                         timeoutInterval: TimeInterval?,
-                        completion: @escaping ResultCompletion) -> ImageDownloaderTask {
+                        completion: @escaping ResultCompletion) -> ImageNetworkTask {
         self.completion = completion
         return spryify(arguments: url, cachePolicy, timeoutInterval, completion)
     }
 }
 
 #if swift(>=6.0)
-extension FakeImageDownloaderNetwork: @unchecked Sendable {}
+extension FakeImageNetworkProvider: @unchecked Sendable {}
 #endif

@@ -1,52 +1,40 @@
 import Foundation
 import Threading
 
-#if canImport(SwiftUI)
-import SwiftUI
-
-/// A reference holder for SwiftUI environments where image downloads need to be managed.
-///
-/// `ImageDownloadReference` provides a way to maintain download task lifecycle in SwiftUI contexts
-/// where traditional view references might not be available.
-public final class ImageDownloadReference {
-    /// Creates a new image download reference instance.
-    public init() {}
-}
-#endif
-
 #if swift(>=6.0)
-internal typealias VoidClosure = @Sendable () -> Void
+public typealias VoidClosure = @Sendable () -> Void
 /// A closure type for handling image download completion.
 ///
 /// `ImageClosure` is called when an image download completes, providing either
 /// the loaded image or `nil` if the download failed.
-public typealias ImageClosure = @Sendable (Result<Image, Error>) -> Void
+public typealias ImageClosure = @Sendable @MainActor (Result<SmartImage, Error>) -> Void
 #else
-internal typealias VoidClosure = () -> Void
+public typealias VoidClosure = () -> Void
 /// A closure type for handling image download completion.
 ///
 /// `ImageClosure` is called when an image download completes, providing either
 /// the loaded image or `nil` if the download failed.
-public typealias ImageClosure = (Result<Image, Error>) -> Void
+public typealias ImageClosure = (Result<SmartImage, Error>) -> Void
 #endif
 
 #if os(iOS) || os(tvOS) || supportsVisionOS
 import UIKit
 
-public typealias Image = UIImage
-public typealias ImageView = UIImageView
+public typealias SmartImage = UIImage
+public typealias SmartImageView = UIImageView
 #elseif os(macOS)
 import Cocoa
 
-public typealias Image = NSImage
-public typealias ImageView = NSImageView
+public typealias SmartImage = NSImage
+public typealias SmartImageView = NSImageView
 #elseif os(watchOS)
 import SwiftUI
 
-public typealias Image = UIImage
+public typealias SmartImage = UIImage
 
-public protocol ImageView: AnyObject, Sendable {
-    var image: Image? { get set }
+/// An abstraction over platform image views for watchOS where `UIImageView` is unavailable.
+public protocol SmartImageView: AnyObject, Sendable {
+    var image: SmartImage? { get set }
 }
 
 #else
@@ -54,7 +42,7 @@ public protocol ImageView: AnyObject, Sendable {
 #endif
 
 #if os(iOS) || os(tvOS)
-private enum Screen {
+private enum DisplayInfo {
     #if swift(>=6.0)
     @MainActor
     #endif
@@ -66,7 +54,7 @@ private enum Screen {
 #elseif os(watchOS)
 import WatchKit
 
-private enum Screen {
+private enum DisplayInfo {
     #if swift(>=6.0)
     @MainActor
     #endif
@@ -76,11 +64,11 @@ private enum Screen {
 }
 
 #elseif supportsVisionOS
-/// Screen utilities for visionOS platform.
+/// DisplayInfo utilities for visionOS platform.
 ///
-/// `Screen` provides screen scale information for visionOS, where traditional screen scale
+/// `DisplayInfo` provides screen scale information for visionOS, where traditional screen scale
 /// concepts don't apply. You can override the scale value for testing purposes.
-public enum Screen {
+public enum DisplayInfo {
     // The screen scale factor for visionOS.
     //
     // visionOS doesn't have a traditional screen scale, so this defaults to `nil`.
@@ -93,9 +81,9 @@ public enum Screen {
 #endif
 
 internal struct PlatformImage {
-    let sdk: Image
+    let sdk: SmartImage
 
-    init(_ image: Image) {
+    init(_ image: SmartImage) {
         self.sdk = image
     }
 
@@ -114,7 +102,7 @@ internal struct PlatformImage {
 
     #elseif supportsVisionOS
     init?(data: Data) {
-        let scale = Queue.isolatedMain.sync { Screen.scale }
+        let scale = Queue.isolatedMain.sync { DisplayInfo.scale }
 
         if let scale,
            let image = UIImage(data: data, scale: scale) {
@@ -132,7 +120,7 @@ internal struct PlatformImage {
 
     #elseif os(iOS) || os(tvOS) || os(watchOS)
     init?(data: Data) {
-        let scale = Queue.isolatedMain.sync { Screen.scale }
+        let scale = Queue.isolatedMain.sync { DisplayInfo.scale }
 
         if let image = UIImage(data: data, scale: scale) {
             self.init(image)
@@ -151,11 +139,15 @@ internal struct PlatformImage {
 
 #if os(macOS)
 private extension NSBitmapImageRep {
-    var png: Data? { representation(using: .png, properties: [:]) }
+    var png: Data? {
+        representation(using: .png, properties: [:])
+    }
 }
 
 private extension Data {
-    var bitmap: NSBitmapImageRep? { NSBitmapImageRep(data: self) }
+    var bitmap: NSBitmapImageRep? {
+        NSBitmapImageRep(data: self)
+    }
 }
 
 private extension NSImage {

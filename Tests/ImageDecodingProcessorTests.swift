@@ -25,7 +25,7 @@ final class ImageDecodingProcessorTests: XCTestCase {
         let actualImage = subject.decode(pngData)
         XCTAssertNotNil(actualImage)
         let unwrapped = try XCTUnwrap(actualImage)
-        XCTAssertEqualImage(PlatformImage(unwrapped).pngData(), PlatformImage(.spry.testImage4).pngData())
+        XCTAssertEqualImage(unwrapped, .spry.testImage4)
     }
 
     func test_broken_data() {
@@ -39,7 +39,7 @@ final class ImageDecodingProcessorTests: XCTestCase {
         let subject = ImageDecodingProcessor(decoders: decoders)
 
         decoders[0].stub(.decode).andReturn(nil)
-        decoders[1].stub(.decode).andReturn(Image.spry.testImage1)
+        decoders[1].stub(.decode).andReturn(SmartImage.spry.testImage1)
 
         let actualImage = subject.decode(pngData)
 
@@ -53,7 +53,7 @@ final class ImageDecodingProcessorTests: XCTestCase {
         let decoders: [FakeImageDecoder] = [.init(), .init()]
         let subject = ImageDecodingProcessor(decoders: decoders)
 
-        decoders[0].stub(.decode).andReturn(Image.spry.testImage1)
+        decoders[0].stub(.decode).andReturn(SmartImage.spry.testImage1)
         decoders[1].stub(.decode).andReturn(nil)
 
         let actualImage = subject.decode(pngData)

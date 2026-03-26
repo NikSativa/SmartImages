@@ -11,8 +11,8 @@ final class ImageCacheTests: XCTestCase {
         let data1 = "data1".data(using: .utf8).unsafelyUnwrapped
         let data2 = "data2".data(using: .utf8).unsafelyUnwrapped
 
-        let info = try XCTUnwrap(ImageCacheInfo(folderName: "TestImageDownloaderCache"))
-        let subject: ImageCaching = ImageCache(info: info)
+        let configuration = try XCTUnwrap(ImageCacheConfiguration(folderName: "TestImageDownloaderCache"))
+        let subject: ImageCaching = ImageCache(configuration: configuration)
         let urlCache: URLCache = (subject as! ImageCache).urlCache
         XCTAssertEqual(urlCache.diskCapacity, 400 * 1024 * 1024)
         XCTAssertEqual(urlCache.memoryCapacity, 40 * 1024 * 1024)

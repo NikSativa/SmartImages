@@ -1,14 +1,18 @@
 import Foundation
 import Threading
 
-internal enum ImageDownloadQueuePriority: Comparable {
-    case preset(ImagePriority)
+/// Priority level for operations in the ``ImageDownloadQueue``.
+///
+/// Operations with `.hasImageView` priority are always preferred over `.preset` operations,
+/// ensuring that visible image views receive their images first.
+public enum FetchQueueingPriority: Comparable {
+    case preset(FetchPriority)
     case hasImageView
 }
 
 #if swift(>=6.0)
-internal protocol ImageDownloadQueueing: Sendable {
-    typealias Prioritizer = @Sendable () -> ImageDownloadQueuePriority
+public protocol ImageQueueScheduling: Sendable {
+    typealias Prioritizer = @Sendable () -> FetchQueueingPriority
     typealias Starter = @Sendable (_ completion: @escaping VoidClosure) -> Void
 
     func add(hash: AnyHashable,
@@ -16,8 +20,8 @@ internal protocol ImageDownloadQueueing: Sendable {
              starter: @escaping Starter)
 }
 #else
-internal protocol ImageDownloadQueueing {
-    typealias Prioritizer = () -> ImageDownloadQueuePriority
+public protocol ImageQueueScheduling {
+    typealias Prioritizer = () -> FetchQueueingPriority
     typealias Starter = (_ completion: @escaping VoidClosure) -> Void
 
     func add(hash: AnyHashable,
@@ -26,22 +30,26 @@ internal protocol ImageDownloadQueueing {
 }
 #endif
 
-internal final class ImageDownloadQueue {
-    typealias Priority = ImageDownloadQueuePriority
+/// A priority queue that manages concurrent image download operations.
+///
+/// Limits the number of simultaneously running downloads and prioritizes operations
+/// based on their ``FetchQueueingPriority``. Higher priority operations are started first.
+public final class ImageDownloadQueue {
+    typealias Priority = FetchQueueingPriority
 
     private let mutex: Locking = AnyLock.pthread(.recursive)
-    private let operatioThreading: Queueable
+    private let operationThreading: Queueable
 
     private var scheduledOperations: [Operation] = []
     private var runningOperations: [Operation] = []
     private let maxConcurrentOperationCount: Int
     private var isScheduled: Bool = false
 
-    /// The open interface `operatioThreading` is for testing purposes only.
-    init(concurrentImagesLimit limit: Int?, operatioThreading: Queueable? = nil) {
-        self.operatioThreading = operatioThreading ?? Queue.custom(label: "ImageDownloadQueue.Operation",
-                                                                   qos: .utility,
-                                                                   attributes: .serial)
+    /// The open interface `operationThreading` is for testing purposes only.
+    public init(concurrentImagesLimit limit: Int?, operationThreading: Queueable? = nil) {
+        self.operationThreading = operationThreading ?? Queue.custom(label: "ImageDownloadQueue.Operation",
+                                                                     qos: .utility,
+                                                                     attributes: .serial)
         self.maxConcurrentOperationCount = limit.map {
             return max($0, 1)
         } ?? .max
@@ -55,7 +63,7 @@ internal final class ImageDownloadQueue {
             isScheduled = true
         }
 
-        operatioThreading.async { [weak self] in
+        operationThreading.async { [weak self] in
             self?.checkQueue()
 
             self?.mutex.syncUnchecked {
@@ -80,7 +88,7 @@ internal final class ImageDownloadQueue {
                 let operation = operations.removeFirst()
                 runningOperations.append(operation)
                 operation.starter { [self] in
-                    operatioThreading.async { [self] in
+                    operationThreading.async { [self] in
                         operationDidFinished(operation)
                     }
                 }
@@ -100,12 +108,12 @@ internal final class ImageDownloadQueue {
     }
 }
 
-// MARK: - ImageDownloadQueueing
+// MARK: - ImageQueueScheduling
 
-extension ImageDownloadQueue: ImageDownloadQueueing {
-    func add(hash: AnyHashable,
-             prioritizer: @escaping Prioritizer,
-             starter: @escaping Starter) {
+extension ImageDownloadQueue: ImageQueueScheduling {
+    public func add(hash: AnyHashable,
+                    prioritizer: @escaping Prioritizer,
+                    starter: @escaping Starter) {
         mutex.syncUnchecked {
             let operation = Operation(hash: hash, prioritizer: prioritizer, starter: starter)
             scheduledOperations.append(operation)
@@ -118,15 +126,15 @@ extension ImageDownloadQueue: ImageDownloadQueueing {
 
 private extension ImageDownloadQueue {
     struct Operation: Equatable {
-        private let prioritizer: ImageDownloadQueueing.Prioritizer
+        private let prioritizer: ImageQueueScheduling.Prioritizer
 
         let hash: AnyHashable
-        let starter: ImageDownloadQueueing.Starter
+        let starter: ImageQueueScheduling.Starter
         let timestamp: TimeInterval = Date().timeIntervalSinceReferenceDate
 
         init(hash: AnyHashable,
-             prioritizer: @escaping ImageDownloadQueueing.Prioritizer,
-             starter: @escaping ImageDownloadQueueing.Starter) {
+             prioritizer: @escaping ImageQueueScheduling.Prioritizer,
+             starter: @escaping ImageQueueScheduling.Starter) {
             self.hash = hash
             self.prioritizer = prioritizer
             self.starter = starter
@@ -145,5 +153,5 @@ private extension ImageDownloadQueue {
 #if swift(>=6.0)
 extension ImageDownloadQueue: @unchecked Sendable {}
 extension ImageDownloadQueue.Operation: @unchecked Sendable {}
-extension ImageDownloadQueuePriority: Sendable {}
+extension FetchQueueingPriority: Sendable {}
 #endif

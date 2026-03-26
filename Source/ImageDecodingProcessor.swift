@@ -1,9 +1,13 @@
 import Foundation
 
-internal struct ImageDecodingProcessor {
+/// Decodes raw `Data` into a `SmartImage` using a chain of decoders.
+///
+/// Iterates through the provided decoders in order until one successfully decodes the data.
+/// If none of the custom decoders can handle the data, `ImageDecoders.Default` is used as a fallback.
+public struct ImageDecodingProcessor {
     private let decoders: [ImageDecoding]
 
-    init(decoders: [ImageDecoding]) {
+    public init(decoders: [ImageDecoding]) {
         if decoders.contains(where: { $0 is ImageDecoders.Default }) {
             self.decoders = decoders
         } else {
@@ -11,7 +15,7 @@ internal struct ImageDecodingProcessor {
         }
     }
 
-    func decode(_ data: Data) -> Image? {
+    public func decode(_ data: Data) -> SmartImage? {
         for decoder in decoders {
             if let image = decoder.decode(data) {
                 return image

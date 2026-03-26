@@ -5,7 +5,7 @@ import XCTest
 
 final class ImagePriorityTests: XCTestCase {
     func test_priority() {
-        XCTAssertEqual(ImagePriority.default, .normal)
-        XCTAssertEqual(ImagePriority.prefetch, .veryLow)
+        XCTAssertEqual(FetchPriority.default, .normal)
+        XCTAssertEqual(FetchPriority.prefetch, .veryLow)
     }
 }

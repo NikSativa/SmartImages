@@ -2,7 +2,7 @@ import Foundation
 import SpryKit
 @testable import SmartImages
 
-final class FakeImageDownloadQueueing: ImageDownloadQueueing, Spryable {
+final class FakeImageQueueScheduling: ImageQueueScheduling, Spryable {
     enum ClassFunction: String, StringRepresentable {
         case empty
     }
@@ -15,10 +15,10 @@ final class FakeImageDownloadQueueing: ImageDownloadQueueing, Spryable {
 
     typealias StarterClosure = (_ completion: @escaping VoidClosure) -> Void
 
-    var prioritizer: (() -> ImageDownloadQueuePriority)?
+    var prioritizer: (() -> FetchQueueingPriority)?
     var starter: StarterClosure?
     func add(hash: AnyHashable,
-             prioritizer: @escaping () -> ImageDownloadQueuePriority,
+             prioritizer: @escaping () -> FetchQueueingPriority,
              starter: @escaping (_ completion: @escaping VoidClosure) -> Void) {
         self.prioritizer = prioritizer
         self.starter = starter
@@ -27,5 +27,5 @@ final class FakeImageDownloadQueueing: ImageDownloadQueueing, Spryable {
 }
 
 #if swift(>=6.0)
-extension FakeImageDownloadQueueing: @unchecked Sendable {}
+extension FakeImageQueueScheduling: @unchecked Sendable {}
 #endif

@@ -1,4 +1,5 @@
 import Foundation
+import SmartImages
 
 /// Animation effects to apply when setting an image in an image view.
 ///
@@ -29,7 +30,7 @@ public enum ImageAnimation {
     #error("unsupported os")
     #endif
 
-    case custom((_ imageView: ImageView, _ image: Image) -> Void)
+    case custom((_ imageView: SmartImageView, _ image: SmartImage) -> Void)
 }
 
 #if swift(>=6.0)
