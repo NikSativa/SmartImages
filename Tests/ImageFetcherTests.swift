@@ -4,16 +4,17 @@ import SpryKit
 import Threading
 import XCTest
 @testable import SmartImages
+@testable import SmartImagesUIKit
 
-final class ImageDownloaderTests: XCTestCase, @unchecked Sendable {
-    private lazy var task: FakeImageDownloaderTask = {
-        let task = FakeImageDownloaderTask()
+final class ImageFetcherTests: XCTestCase, @unchecked Sendable {
+    private lazy var task: FakeImageNetworkTask = {
+        let task = FakeImageNetworkTask()
         task.stub(.start).andReturn()
         return task
     }()
 
-    private lazy var network: FakeImageDownloaderNetwork = {
-        let network = FakeImageDownloaderNetwork()
+    private lazy var network: FakeImageNetworkProvider = {
+        let network = FakeImageNetworkProvider()
         network.stub(.request).andReturn(task)
         return network
     }()
@@ -27,20 +28,20 @@ final class ImageDownloaderTests: XCTestCase, @unchecked Sendable {
 
     private lazy var imageDecoding: ImageDecodingProcessor = .init(decoders: [])
 
-    private lazy var downloadQueue: FakeImageDownloadQueueing = {
-        let downloadQueue = FakeImageDownloadQueueing()
+    private lazy var downloadQueue: FakeImageQueueScheduling = {
+        let downloadQueue = FakeImageQueueScheduling()
         downloadQueue.stub(.add).andReturn()
         return downloadQueue
     }()
 
-    private lazy var subject = ImageDownloader(network: network,
-                                               decodingQueue: .async(Queue.background),
-                                               imageCache: imageCache,
-                                               imageDecoding: imageDecoding,
-                                               downloadQueue: downloadQueue)
+    private lazy var subject = ImageFetcher(network: network,
+                                            decodingQueue: .async(Queue.background),
+                                            imageCache: imageCache,
+                                            imageDecoding: imageDecoding,
+                                            downloadQueue: downloadQueue)
     private var token: AnyCancellable?
 
-    func test_download_url_success() {
+    func test_download_url_success() throws {
         let expImage = expectation(description: "wait image")
         token = subject.download(url: .testMake("google.com/\(1)")) { img in
             XCTAssertEqualImage(img.image, .spry.testImage4)
@@ -54,8 +55,8 @@ final class ImageDownloaderTests: XCTestCase, @unchecked Sendable {
 
         XCTAssertHaveNotReceived(imageCache, .store)
 
-        let image: Image = .spry.testImage4
-        let imageData: Data = PlatformImage(image).pngData()!
+        let image: SmartImage = .spry.testImage4
+        let imageData: Data = try XCTUnwrap(PlatformImage(image).pngData())
         Queue.utility.asyncAfter(deadline: .now() + 0.1) { [network] in
             network.completion?(.success(imageData))
         }
@@ -99,10 +100,10 @@ final class ImageDownloaderTests: XCTestCase, @unchecked Sendable {
     }
 
     func test_create() {
-        let network = FakeImageDownloaderNetwork()
-        let cache = ImageCacheInfo(folderName: "ImageDownloaderTests.ImageCacheInfo.folderName")
-        let subject: ImageDownloading? = ImageDownloader(network: network,
-                                                         cache: cache)
+        let network = FakeImageNetworkProvider()
+        let cache = ImageCacheConfiguration(folderName: "ImageFetcherTests.ImageCacheConfiguration.folderName")
+        let subject: ImageFetching? = ImageFetcher(network: network,
+                                                   cache: cache)
         XCTAssertNotNil(subject)
     }
 
@@ -111,10 +112,10 @@ final class ImageDownloaderTests: XCTestCase, @unchecked Sendable {
             return TimeInterval((0...1000).randomElement()!) / 10000
         }
 
-        let network = FakeImageDownloaderNetwork()
-        let subject: ImageDownloading = ImageDownloader(network: network,
-                                                        cache: nil,
-                                                        concurrentLimit: 10)
+        let network = FakeImageNetworkProvider()
+        let subject: ImageFetching = ImageFetcher(network: network,
+                                                  cache: nil,
+                                                  concurrentLimit: 10)
 
         let limit = 100
         var tokens: Set<AnyCancellable> = []
@@ -128,7 +129,7 @@ final class ImageDownloaderTests: XCTestCase, @unchecked Sendable {
                 let url = (sendableArgs.value[0] as? URL)!
                 let ind: Int = .init(url.absoluteString.components(separatedBy: "/").last!)!
 
-                (sendableArgs.value[2] as? FakeImageDownloadQueueing.StarterClosure)! {
+                (sendableArgs.value[2] as? FakeImageQueueScheduling.StarterClosure)! {
                     expsLoading.value[ind].fulfill()
                 }
             }
@@ -141,10 +142,10 @@ final class ImageDownloaderTests: XCTestCase, @unchecked Sendable {
             expsLoading.value.append(expLoading)
 
             network.stub(.request).with(url, Argument.nil, Argument.nil, Argument.closure).andDo { args in
-                let completion = SendableResult(value: args[3] as? ImageDownloaderNetwork.ResultCompletion)
+                let completion = SendableResult(value: args[3] as? ImageNetworkProvider.ResultCompletion)
                 if i < limit / 2 {
                     Queue.main.asyncAfter(deadline: .now() + rands()) {
-                        let image: Image = .spry.testImage4
+                        let image: SmartImage = .spry.testImage4
                         let imageData: Data = PlatformImage(image).pngData() ?? Data()
                         completion.value(.success(imageData))
                         expLoading.fulfill()
@@ -156,7 +157,7 @@ final class ImageDownloaderTests: XCTestCase, @unchecked Sendable {
                     }
                 }
 
-                let task = FakeImageDownloaderTask()
+                let task = FakeImageNetworkTask()
                 task.stub(.start).andReturn()
                 task.stub(.cancel).andReturn()
 
@@ -184,19 +185,19 @@ final class ImageDownloaderTests: XCTestCase, @unchecked Sendable {
     }
 }
 
-private extension Result<Image, Error> {
+private extension Result<SmartImage, Error> {
     var error: NSError? {
         switch self {
         case .success:
             return nil
-        case .failure(let error):
+        case let .failure(error):
             return error as NSError
         }
     }
 
-    var image: Image? {
+    var image: SmartImage? {
         switch self {
-        case .success(let image):
+        case let .success(image):
             return image
         case .failure:
             return nil

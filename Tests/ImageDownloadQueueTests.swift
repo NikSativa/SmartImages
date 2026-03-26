@@ -19,7 +19,7 @@ final class ImageDownloadQueueTests: XCTestCase {
         }
 
         let subject = ImageDownloadQueue(concurrentImagesLimit: nil,
-                                         operatioThreading: queue)
+                                         operationThreading: queue)
         let started: SendableResult<[Int]> = .init(value: [])
 
         for i in 0..<100 {
@@ -45,7 +45,7 @@ final class ImageDownloadQueueTests: XCTestCase {
         }
 
         let subject = ImageDownloadQueue(concurrentImagesLimit: limit,
-                                         operatioThreading: queue)
+                                         operationThreading: queue)
         let started: SendableResult<[Int: VoidClosure]> = .init(value: [:])
 
         for i in 0..<100 {
@@ -71,23 +71,23 @@ final class ImageDownloadQueueTests: XCTestCase {
         XCTAssertEqual(started.value.count, limit)
         XCTAssertEqual(started.value.keys.sorted(), [0, 1, 2, 3, 4])
 
-        started.value[0]!()
+        started.value[0]?()
         XCTAssertEqual(started.value.count, limit)
         XCTAssertEqual(started.value.keys.sorted(), [1, 2, 3, 4, 111]) // added by priority 'hasImageView'
 
-        started.value[1]!()
+        started.value[1]?()
         XCTAssertEqual(started.value.count, limit)
         XCTAssertEqual(started.value.keys.sorted(), [2, 3, 4, 99, 111]) // added from the end by timestamp
 
-        started.value[111]!()
+        started.value[111]?()
         XCTAssertEqual(started.value.count, limit)
         XCTAssertEqual(started.value.keys.sorted(), [2, 3, 4, 98, 99]) // added from the end by timestamp
 
-        started.value[3]!()
+        started.value[3]?()
         XCTAssertEqual(started.value.count, limit)
         XCTAssertEqual(started.value.keys.sorted(), [2, 4, 97, 98, 99]) // added from the end by timestamp
 
-        started.value[98]!()
+        started.value[98]?()
         XCTAssertEqual(started.value.count, limit)
         XCTAssertEqual(started.value.keys.sorted(), [2, 4, 96, 97, 99]) // added from the end by timestamp
     }
@@ -95,7 +95,7 @@ final class ImageDownloadQueueTests: XCTestCase {
     func test_real_queue() {
         let limit = 5
         let subject = ImageDownloadQueue(concurrentImagesLimit: limit,
-                                         operatioThreading: nil)
+                                         operationThreading: nil)
         let expectations: SendableResult<[Int: XCTestExpectation]> = .init(value: [:])
         let started: SendableResult<[Int: () -> Void]> = .init(value: [:])
         let fulfilled: SendableResult<Set<Int>> = .init(value: [])

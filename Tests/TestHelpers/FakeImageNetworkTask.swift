@@ -2,7 +2,7 @@ import Foundation
 import SmartImages
 import SpryKit
 
-public final class FakeImageDownloaderTask: ImageDownloaderTask, Spryable {
+public final class FakeImageNetworkTask: ImageNetworkTask, Spryable {
     public enum ClassFunction: String, StringRepresentable {
         case empty
     }

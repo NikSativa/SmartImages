@@ -2,13 +2,13 @@ import Foundation
 
 /// Configuration information for downloading and processing an image.
 ///
-/// `ImageInfo` encapsulates all the parameters needed to download an image, including URL, cache policy,
+/// `ImageRequest` encapsulates all the parameters needed to download an image, including URL, cache policy,
 /// timeout settings, image processors, and download priority. This allows for fine-grained control over
 /// how images are downloaded and processed.
 ///
 /// ## Usage Example
 /// ```swift
-/// let info = ImageInfo(
+/// let info = ImageRequest(
 ///     url: URL(string: "https://example.com/image.jpg")!,
 ///     cachePolicy: .returnCacheDataElseLoad,
 ///     timeoutInterval: 30.0,
@@ -16,14 +16,14 @@ import Foundation
 ///     priority: .high
 /// )
 /// ```
-public struct ImageInfo {
+public struct ImageRequest {
     public let url: URL
     public let cachePolicy: URLRequest.CachePolicy?
     public let timeoutInterval: TimeInterval?
     public let processors: [ImageProcessor]
-    public let priority: ImagePriority
+    public let priority: FetchPriority
 
-    /// Creates a new `ImageInfo` instance with the specified parameters.
+    /// Creates a new `ImageRequest` instance with the specified parameters.
     ///
     /// - Parameters:
     ///   - url: The URL of the image to download.
@@ -35,7 +35,7 @@ public struct ImageInfo {
                 cachePolicy: URLRequest.CachePolicy? = nil,
                 timeoutInterval: TimeInterval? = nil,
                 processors: [ImageProcessor] = [],
-                priority: ImagePriority = .default) {
+                priority: FetchPriority = .default) {
         self.url = url
         self.cachePolicy = cachePolicy
         self.timeoutInterval = timeoutInterval
@@ -44,6 +44,16 @@ public struct ImageInfo {
     }
 }
 
+extension ImageRequest: Hashable {
+    public static func ==(lhs: ImageRequest, rhs: ImageRequest) -> Bool {
+        return lhs.url == rhs.url
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(url)
+    }
+}
+
 #if swift(>=6.0)
-extension ImageInfo: Sendable {}
+extension ImageRequest: Sendable {}
 #endif

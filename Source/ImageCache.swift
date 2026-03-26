@@ -25,6 +25,9 @@ public protocol ImageCaching: Sendable {
     func removeAll()
 }
 #else
+/// A protocol for caching image data associated with URLs.
+///
+/// Conform to this protocol to implement custom image caching mechanisms.
 public protocol ImageCaching {
     /// Retrieves cached image data for a given URL key.
     ///
@@ -46,27 +49,27 @@ public protocol ImageCaching {
 }
 #endif
 
-internal final class ImageCache: @unchecked Sendable {
+public final class ImageCache: @unchecked Sendable {
     @AtomicValue
-    internal private(set) var urlCache: URLCache
+    public private(set) var urlCache: URLCache
 
-    init(info: ImageCacheInfo) {
-        self.urlCache = URLCache(memoryCapacity: info.memoryCapacity,
-                                 diskCapacity: info.diskCapacity,
-                                 directory: info.directory)
+    public init(configuration: ImageCacheConfiguration) {
+        self.urlCache = URLCache(memoryCapacity: configuration.memoryCapacity,
+                                 diskCapacity: configuration.diskCapacity,
+                                 directory: configuration.directory)
     }
 }
 
 // MARK: - ImageCaching
 
 extension ImageCache: ImageCaching {
-    func cached(for key: URL) -> Data? {
+    public func cached(for key: URL) -> Data? {
         return $urlCache.sync { urlCache in
             return urlCache.cachedResponse(for: key.request)?.data
         }
     }
 
-    func store(_ data: Data, for key: URL) {
+    public func store(_ data: Data, for key: URL) {
         return $urlCache.sync { urlCache in
             let response = CachedURLResponse(response: .init(url: key,
                                                              mimeType: nil,
@@ -79,13 +82,13 @@ extension ImageCache: ImageCaching {
         }
     }
 
-    func remove(for key: URL) {
+    public func remove(for key: URL) {
         return $urlCache.sync { urlCache in
             urlCache.removeCachedResponse(for: key.request)
         }
     }
 
-    func removeAll() {
+    public func removeAll() {
         return $urlCache.sync { urlCache in
             urlCache.removeAllCachedResponses()
         }

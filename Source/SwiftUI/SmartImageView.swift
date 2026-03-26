@@ -1,0 +1,235 @@
+#if canImport(SwiftUI)
+import Foundation
+import SmartImages
+import SwiftUI
+import Threading
+
+/// A view that asynchronously loads and displays an image from one or more URLs.
+///
+/// `AsyncImageView` supports fallback URLs — if the first URL fails, the next one is tried.
+/// While loading, a placeholder with an optional loader overlay is shown.
+///
+/// ## Usage Example
+/// ```swift
+/// AsyncImageView(url: imageURL, imageFetcher: downloader) {
+///     ProgressView()
+/// } placeholder: {
+///     Image(systemName: "photo")
+/// }
+/// ```
+@MainActor
+public struct SmartImageView<P: View, L: View>: View {
+    private enum State {
+        case idle
+        case loading
+        case loaded(SwiftUI.Image)
+        case failed
+        case noURL
+
+        var shouldFetch: Bool {
+            switch self {
+            case .idle:
+                return true
+            case .loading,
+                 .loaded,
+                 .failed,
+                 .noURL:
+                return false
+            }
+        }
+    }
+
+    private let loader: () -> L
+    private let placeholder: () -> P
+    private let requests: [ImageRequest]
+    private let showLoader: Bool
+    private let imageFetcher: ImageFetching
+
+    @SwiftUI.State
+    private var reference = ImageDownloadReference()
+    @SwiftUI.State
+    private var state: State
+    @SwiftUI.State
+    private var loadedRequests: [ImageRequest] = []
+
+    public init(requests: [ImageRequest],
+                imageFetcher: ImageFetching,
+                showLoader: Bool = true,
+                @ViewBuilder loader: @escaping () -> L,
+                @ViewBuilder placeholder: @escaping () -> P) {
+        self.requests = requests
+        self.showLoader = showLoader
+        self.loader = loader
+        self.placeholder = placeholder
+        self.state = .idle
+        self.imageFetcher = imageFetcher
+    }
+
+    public var body: some View {
+        ZStack {
+            switch state {
+            case .idle,
+                 .loading:
+                placeholder()
+
+                if showLoader {
+                    loader()
+                }
+
+            case let .loaded(image):
+                image
+                    .resizable()
+                    .scaledToFit()
+
+            case .failed,
+                 .noURL:
+                placeholder()
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .onAppear {
+            startLoadingIfNeeded()
+        }
+    }
+
+    private func startLoadingIfNeeded() {
+        guard state.shouldFetch || loadedRequests != requests else {
+            return
+        }
+
+        guard !requests.isEmpty else {
+            state = .noURL
+            return
+        }
+
+        loadURL(atIndex: 0)
+    }
+
+    private func loadURL(atIndex: Int) {
+        guard atIndex < requests.count else {
+            state = .failed
+            return
+        }
+
+        state = .loading
+        let request = requests[atIndex]
+        imageFetcher.download(of: request, for: reference) { [weak reference] result in
+            guard reference === self.reference, requests.contains(request) else {
+                return
+            }
+
+            switch result {
+            case let .success(image):
+                loadedRequests = requests
+                #if os(iOS) || os(tvOS) || os(watchOS) || supportsVisionOS
+                state = .loaded(.init(uiImage: image))
+                #elseif os(macOS)
+                state = .loaded(.init(nsImage: image))
+                #endif
+
+            case .failure:
+                loadURL(atIndex: atIndex + 1)
+            }
+        }
+    }
+}
+
+public extension SmartImageView {
+    init(request: ImageRequest?,
+         imageFetcher: ImageFetching,
+         showLoader: Bool = true,
+         @ViewBuilder loader: @escaping () -> L,
+         @ViewBuilder placeholder: @escaping () -> P) {
+        self.init(requests: request.map { [$0] } ?? [],
+                  imageFetcher: imageFetcher,
+                  showLoader: showLoader,
+                  loader: loader,
+                  placeholder: placeholder)
+    }
+
+    @available(iOS 17.0, macOS 14.0, tvOS 17.0, watchOS 10.0, *)
+    init(requests: [ImageRequest],
+         imageFetcher: ImageFetching,
+         placeholder: ImageResource,
+         showLoader: Bool = true,
+         @ViewBuilder loader: @escaping () -> L) where P == AnyView {
+        self.init(requests: requests,
+                  imageFetcher: imageFetcher,
+                  showLoader: showLoader,
+                  loader: loader,
+                  placeholder: {
+                      AnyView(SwiftUI.Image(placeholder)
+                          .resizable()
+                          .scaledToFit())
+                  })
+    }
+
+    @available(iOS 17.0, macOS 14.0, tvOS 17.0, watchOS 10.0, *)
+    init(request: ImageRequest?,
+         imageFetcher: ImageFetching,
+         placeholder: ImageResource,
+         showLoader: Bool = true,
+         @ViewBuilder loader: @escaping () -> L) where P == AnyView {
+        self.init(requests: request.map { [$0] } ?? [],
+                  imageFetcher: imageFetcher,
+                  placeholder: placeholder,
+                  showLoader: showLoader,
+                  loader: loader)
+    }
+
+    // MARK: URL
+
+    init(urls: [URL],
+         imageFetcher: ImageFetching,
+         showLoader: Bool = true,
+         @ViewBuilder loader: @escaping () -> L,
+         @ViewBuilder placeholder: @escaping () -> P) {
+        self.init(requests: urls.map { .init(url: $0) },
+                  imageFetcher: imageFetcher,
+                  showLoader: showLoader,
+                  loader: loader,
+                  placeholder: placeholder)
+    }
+
+    init(url: URL?,
+         imageFetcher: ImageFetching,
+         showLoader: Bool = true,
+         @ViewBuilder loader: @escaping () -> L,
+         @ViewBuilder placeholder: @escaping () -> P) {
+        self.init(urls: url.map { [$0] } ?? [],
+                  imageFetcher: imageFetcher,
+                  showLoader: showLoader,
+                  loader: loader,
+                  placeholder: placeholder)
+    }
+
+    @available(iOS 17.0, macOS 14.0, tvOS 17.0, watchOS 10.0, *)
+    init(urls: [URL],
+         imageFetcher: ImageFetching,
+         placeholder: ImageResource,
+         showLoader: Bool = true,
+         @ViewBuilder loader: @escaping () -> L) where P == AnyView {
+        self.init(requests: urls.map { .init(url: $0) },
+                  imageFetcher: imageFetcher,
+                  placeholder: placeholder,
+                  showLoader: showLoader,
+                  loader: loader)
+    }
+
+    @available(iOS 17.0, macOS 14.0, tvOS 17.0, watchOS 10.0, *)
+    init(url: URL?,
+         imageFetcher: ImageFetching,
+         placeholder: ImageResource,
+         showLoader: Bool = true,
+         @ViewBuilder loader: @escaping () -> L) where P == AnyView {
+        self.init(urls: url.map { [$0] } ?? [],
+                  imageFetcher: imageFetcher,
+                  placeholder: placeholder,
+                  showLoader: showLoader,
+                  loader: loader)
+    }
+}
+
+private final class ImageDownloadReference {}
+
+#endif

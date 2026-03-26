@@ -13,7 +13,7 @@ public final class FakeImageDecoder: ImageDecoding, Spryable {
 
     public init() {}
 
-    public func decode(_ data: Data) -> Image? {
+    public func decode(_ data: Data) -> SmartImage? {
         return spryify(arguments: data)
     }
 }

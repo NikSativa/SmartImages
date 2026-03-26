@@ -10,19 +10,19 @@ import Foundation
 /// ## Usage Example
 /// ```swift
 /// struct CustomDecoder: ImageDecoding {
-///     func decode(_ data: Data) -> Image? {
+///     func decode(_ data: Data) -> SmartImage? {
 ///         // Custom decoding logic for specific format
 ///         return decodedImage
 ///     }
 /// }
 ///
-/// let downloader = ImageDownloader(
+/// let downloader = ImageFetcher(
 ///     network: network,
 ///     decoders: [CustomDecoder(), ImageDecoders.Default()]
 /// )
 /// ```
 public protocol ImageDecoding: Sendable {
-    func decode(_ data: Data) -> Image?
+    func decode(_ data: Data) -> SmartImage?
 }
 #else
 /// Protocol for decoding image data into platform-specific image objects.
@@ -34,19 +34,19 @@ public protocol ImageDecoding: Sendable {
 /// ## Usage Example
 /// ```swift
 /// struct CustomDecoder: ImageDecoding {
-///     func decode(_ data: Data) -> Image? {
+///     func decode(_ data: Data) -> SmartImage? {
 ///         // Custom decoding logic for specific format
 ///         return decodedImage
 ///     }
 /// }
 ///
-/// let downloader = ImageDownloader(
+/// let downloader = ImageFetcher(
 ///     network: network,
 ///     decoders: [CustomDecoder(), ImageDecoders.Default()]
 /// )
 /// ```
 public protocol ImageDecoding {
-    func decode(_ data: Data) -> Image?
+    func decode(_ data: Data) -> SmartImage?
 }
 #endif
 
@@ -66,7 +66,7 @@ public extension ImageDecoders {
     ///
     /// ## Usage Example
     /// ```swift
-    /// let downloader = ImageDownloader(
+    /// let downloader = ImageFetcher(
     ///     network: network,
     ///     decoders: [ImageDecoders.Default()]
     /// )
@@ -79,7 +79,7 @@ public extension ImageDecoders {
         ///
         /// - Parameter data: The image data to decode.
         /// - Returns: A decoded image if successful, `nil` otherwise.
-        public func decode(_ data: Data) -> Image? {
+        public func decode(_ data: Data) -> SmartImage? {
             return PlatformImage(data: data)?.sdk
         }
     }

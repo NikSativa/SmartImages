@@ -1,6 +1,6 @@
 import Foundation
 
-internal extension URLRequest.CachePolicy {
+public extension URLRequest.CachePolicy {
     var canUseCachedData: Bool {
         switch self {
         case .returnCacheDataDontLoad,
