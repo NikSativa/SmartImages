@@ -152,15 +152,13 @@ public extension SmartImageView {
          imageFetcher: ImageFetching,
          placeholder: ImageResource,
          showLoader: Bool = true,
-         @ViewBuilder loader: @escaping () -> L) where P == AnyView {
+         @ViewBuilder loader: @escaping () -> L) where P == SmartImagePlaceholder {
         self.init(requests: requests,
                   imageFetcher: imageFetcher,
                   showLoader: showLoader,
                   loader: loader,
                   placeholder: {
-                      AnyView(SwiftUI.Image(placeholder)
-                          .resizable()
-                          .scaledToFit())
+                      SmartImagePlaceholder(placeholder)
                   })
     }
 
@@ -169,7 +167,7 @@ public extension SmartImageView {
          imageFetcher: ImageFetching,
          placeholder: ImageResource,
          showLoader: Bool = true,
-         @ViewBuilder loader: @escaping () -> L) where P == AnyView {
+         @ViewBuilder loader: @escaping () -> L) where P == SmartImagePlaceholder {
         self.init(requests: request.map { [$0] } ?? [],
                   imageFetcher: imageFetcher,
                   placeholder: placeholder,
@@ -208,7 +206,7 @@ public extension SmartImageView {
          imageFetcher: ImageFetching,
          placeholder: ImageResource,
          showLoader: Bool = true,
-         @ViewBuilder loader: @escaping () -> L) where P == AnyView {
+         @ViewBuilder loader: @escaping () -> L) where P == SmartImagePlaceholder {
         self.init(requests: urls.map { .init(url: $0) },
                   imageFetcher: imageFetcher,
                   placeholder: placeholder,
@@ -221,12 +219,27 @@ public extension SmartImageView {
          imageFetcher: ImageFetching,
          placeholder: ImageResource,
          showLoader: Bool = true,
-         @ViewBuilder loader: @escaping () -> L) where P == AnyView {
+         @ViewBuilder loader: @escaping () -> L) where P == SmartImagePlaceholder {
         self.init(urls: url.map { [$0] } ?? [],
                   imageFetcher: imageFetcher,
                   placeholder: placeholder,
                   showLoader: showLoader,
                   loader: loader)
+    }
+}
+
+@available(iOS 17.0, macOS 14.0, tvOS 17.0, watchOS 10.0, *)
+public struct SmartImagePlaceholder: View {
+    private let resource: ImageResource
+
+    init(_ resource: ImageResource) {
+        self.resource = resource
+    }
+
+    public var body: some View {
+        SwiftUI.Image(resource)
+            .resizable()
+            .scaledToFit()
     }
 }
 
