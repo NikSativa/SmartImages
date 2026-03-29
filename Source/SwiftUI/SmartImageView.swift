@@ -6,39 +6,20 @@ import Threading
 
 /// A view that asynchronously loads and displays an image from one or more URLs.
 ///
-/// `AsyncImageView` supports fallback URLs — if the first URL fails, the next one is tried.
+/// `SmartImageView` supports fallback URLs — if the first URL fails, the next one is tried.
 /// While loading, a placeholder with an optional loader overlay is shown.
 ///
 /// ## Usage Example
 /// ```swift
-/// AsyncImageView(url: imageURL, imageFetcher: downloader) {
+/// SmartImageView(url: imageURL, imageFetcher: downloader) {
 ///     ProgressView()
 /// } placeholder: {
 ///     Image(systemName: "photo")
 /// }
+/// .smartImageStyle(MyCustomStyle())
 /// ```
 @MainActor
 public struct SmartImageView<P: View, L: View>: View {
-    private enum State {
-        case idle
-        case loading
-        case loaded(SwiftUI.Image)
-        case failed
-        case noURL
-
-        var shouldFetch: Bool {
-            switch self {
-            case .idle:
-                return true
-            case .loading,
-                 .loaded,
-                 .failed,
-                 .noURL:
-                return false
-            }
-        }
-    }
-
     private let loader: () -> L
     private let placeholder: () -> P
     private let requests: [ImageRequest]
@@ -46,9 +27,11 @@ public struct SmartImageView<P: View, L: View>: View {
     private let imageFetcher: ImageFetching
 
     @SwiftUI.State
+    private var style: any SmartImageStyle<P, L>
+    @SwiftUI.State
     private var reference = ImageDownloadReference()
     @SwiftUI.State
-    private var state: State
+    private var phase: SmartImagePhase
     @SwiftUI.State
     private var loadedRequests: [ImageRequest] = []
 
@@ -61,44 +44,37 @@ public struct SmartImageView<P: View, L: View>: View {
         self.showLoader = showLoader
         self.loader = loader
         self.placeholder = placeholder
-        self.state = .idle
+        self.phase = .idle
         self.imageFetcher = imageFetcher
+        self.style = DefaultSmartImageStyle<P, L>()
     }
 
     public var body: some View {
-        ZStack {
-            switch state {
-            case .idle,
-                 .loading:
-                placeholder()
+        AnyView(style.makeBody(configuration: configuration)
+            .task {
+                startLoadingIfNeeded()
+            })
+    }
 
-                if showLoader {
-                    loader()
-                }
+    private var configuration: SmartImageStyleConfiguration<P, L> {
+        .init(phase: phase,
+              placeholder: placeholder,
+              loader: loader,
+              showLoader: showLoader)
+    }
 
-            case let .loaded(image):
-                image
-                    .resizable()
-                    .scaledToFit()
-
-            case .failed,
-                 .noURL:
-                placeholder()
-            }
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .onAppear {
-            startLoadingIfNeeded()
-        }
+    public func smartImageStyle(_ style: any SmartImageStyle<P, L>) -> some View {
+        self.style = style
+        return self
     }
 
     private func startLoadingIfNeeded() {
-        guard state.shouldFetch || loadedRequests != requests else {
+        guard phase.shouldFetch || loadedRequests != requests else {
             return
         }
 
         guard !requests.isEmpty else {
-            state = .noURL
+            phase = .noURL
             return
         }
 
@@ -107,11 +83,11 @@ public struct SmartImageView<P: View, L: View>: View {
 
     private func loadURL(atIndex: Int) {
         guard atIndex < requests.count else {
-            state = .failed
+            phase = .failed
             return
         }
 
-        state = .loading
+        phase = .loading
         let request = requests[atIndex]
         imageFetcher.download(of: request, for: reference) { [weak reference] result in
             guard reference === self.reference, requests.contains(request) else {
@@ -122,7 +98,7 @@ public struct SmartImageView<P: View, L: View>: View {
             case let .success(image):
                 loadedRequests = requests
                 #if os(iOS) || os(tvOS) || os(watchOS) || supportsVisionOS
-                state = .loaded(.init(uiImage: image))
+                phase = .loaded(.init(uiImage: image))
                 #elseif os(macOS)
                 state = .loaded(.init(nsImage: image))
                 #endif
