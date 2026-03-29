@@ -100,7 +100,7 @@ public struct SmartImageView<P: View, L: View>: View {
                 #if os(iOS) || os(tvOS) || os(watchOS) || supportsVisionOS
                 phase = .loaded(.init(uiImage: image))
                 #elseif os(macOS)
-                state = .loaded(.init(nsImage: image))
+                phase = .loaded(.init(nsImage: image))
                 #endif
 
             case .failure:
