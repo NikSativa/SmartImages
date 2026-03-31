@@ -25,9 +25,8 @@ public struct SmartImageView<P: View, L: View>: View {
     private let requests: [ImageRequest]
     private let showLoader: Bool
     private let imageFetcher: ImageFetching
+    private let style: any SmartImageStyle<P, L>
 
-    @SwiftUI.State
-    private var style: any SmartImageStyle<P, L>
     @SwiftUI.State
     private var reference = ImageDownloadReference()
     @SwiftUI.State
@@ -38,6 +37,7 @@ public struct SmartImageView<P: View, L: View>: View {
     public init(requests: [ImageRequest],
                 imageFetcher: ImageFetching,
                 showLoader: Bool = true,
+                style: (any SmartImageStyle<P, L>)? = nil,
                 @ViewBuilder loader: @escaping () -> L,
                 @ViewBuilder placeholder: @escaping () -> P) {
         self.requests = requests
@@ -46,7 +46,7 @@ public struct SmartImageView<P: View, L: View>: View {
         self.placeholder = placeholder
         self.phase = .idle
         self.imageFetcher = imageFetcher
-        self.style = DefaultSmartImageStyle<P, L>()
+        self.style = style ?? DefaultSmartImageStyle<P, L>()
     }
 
     public var body: some View {
@@ -61,11 +61,6 @@ public struct SmartImageView<P: View, L: View>: View {
               placeholder: placeholder,
               loader: loader,
               showLoader: showLoader)
-    }
-
-    public func smartImageStyle(_ style: any SmartImageStyle<P, L>) -> some View {
-        self.style = style
-        return self
     }
 
     private func startLoadingIfNeeded() {
@@ -114,11 +109,13 @@ public extension SmartImageView {
     init(request: ImageRequest?,
          imageFetcher: ImageFetching,
          showLoader: Bool = true,
+         style: (any SmartImageStyle<P, L>)? = nil,
          @ViewBuilder loader: @escaping () -> L,
          @ViewBuilder placeholder: @escaping () -> P) {
         self.init(requests: request.map { [$0] } ?? [],
                   imageFetcher: imageFetcher,
                   showLoader: showLoader,
+                  style: style,
                   loader: loader,
                   placeholder: placeholder)
     }
@@ -128,10 +125,12 @@ public extension SmartImageView {
          imageFetcher: ImageFetching,
          placeholder: ImageResource,
          showLoader: Bool = true,
+         style: (any SmartImageStyle<SmartImagePlaceholder, L>)? = nil,
          @ViewBuilder loader: @escaping () -> L) where P == SmartImagePlaceholder {
         self.init(requests: requests,
                   imageFetcher: imageFetcher,
                   showLoader: showLoader,
+                  style: style,
                   loader: loader,
                   placeholder: {
                       SmartImagePlaceholder(placeholder)
@@ -143,11 +142,13 @@ public extension SmartImageView {
          imageFetcher: ImageFetching,
          placeholder: ImageResource,
          showLoader: Bool = true,
+         style: (any SmartImageStyle<SmartImagePlaceholder, L>)? = nil,
          @ViewBuilder loader: @escaping () -> L) where P == SmartImagePlaceholder {
         self.init(requests: request.map { [$0] } ?? [],
                   imageFetcher: imageFetcher,
                   placeholder: placeholder,
                   showLoader: showLoader,
+                  style: style,
                   loader: loader)
     }
 
@@ -156,11 +157,13 @@ public extension SmartImageView {
     init(urls: [URL],
          imageFetcher: ImageFetching,
          showLoader: Bool = true,
+         style: (any SmartImageStyle<P, L>)? = nil,
          @ViewBuilder loader: @escaping () -> L,
          @ViewBuilder placeholder: @escaping () -> P) {
         self.init(requests: urls.map { .init(url: $0) },
                   imageFetcher: imageFetcher,
                   showLoader: showLoader,
+                  style: style,
                   loader: loader,
                   placeholder: placeholder)
     }
@@ -168,11 +171,13 @@ public extension SmartImageView {
     init(url: URL?,
          imageFetcher: ImageFetching,
          showLoader: Bool = true,
+         style: (any SmartImageStyle<P, L>)? = nil,
          @ViewBuilder loader: @escaping () -> L,
          @ViewBuilder placeholder: @escaping () -> P) {
         self.init(urls: url.map { [$0] } ?? [],
                   imageFetcher: imageFetcher,
                   showLoader: showLoader,
+                  style: style,
                   loader: loader,
                   placeholder: placeholder)
     }
@@ -182,11 +187,13 @@ public extension SmartImageView {
          imageFetcher: ImageFetching,
          placeholder: ImageResource,
          showLoader: Bool = true,
+         style: (any SmartImageStyle<SmartImagePlaceholder, L>)? = nil,
          @ViewBuilder loader: @escaping () -> L) where P == SmartImagePlaceholder {
         self.init(requests: urls.map { .init(url: $0) },
                   imageFetcher: imageFetcher,
                   placeholder: placeholder,
                   showLoader: showLoader,
+                  style: style,
                   loader: loader)
     }
 
@@ -195,11 +202,13 @@ public extension SmartImageView {
          imageFetcher: ImageFetching,
          placeholder: ImageResource,
          showLoader: Bool = true,
+         style: (any SmartImageStyle<SmartImagePlaceholder, L>)? = nil,
          @ViewBuilder loader: @escaping () -> L) where P == SmartImagePlaceholder {
         self.init(urls: url.map { [$0] } ?? [],
                   imageFetcher: imageFetcher,
                   placeholder: placeholder,
                   showLoader: showLoader,
+                  style: style,
                   loader: loader)
     }
 }
