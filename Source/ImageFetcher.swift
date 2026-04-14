@@ -187,6 +187,7 @@ public final class ImageFetcher {
             let task = network.request(with: cachedRequest?.url ?? url,
                                        cachePolicy: cachedRequest?.cachePolicy,
                                        timeoutInterval: cachedRequest?.timeoutInterval,
+                                       headers: cachedRequest?.headers,
                                        completion: { [self] result in
                                            self.mutex.sync {
                                                self.cacheActiveTasks[url] = nil

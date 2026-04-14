@@ -4,7 +4,7 @@ import SwiftUI
 public enum SmartImagePhase {
     case idle
     case loading
-    case loaded(SwiftUI.Image)
+    case loaded(SwiftUI.Image, nativeSize: CGSize)
     case failed
     case noURL
 

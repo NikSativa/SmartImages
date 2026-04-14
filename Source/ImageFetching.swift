@@ -78,11 +78,13 @@ public extension ImageFetching {
     func download(url: URL,
                   cachePolicy: URLRequest.CachePolicy? = nil,
                   timeoutInterval: TimeInterval? = nil,
+                  headers: [String: String]? = nil,
                   processors: [ImageProcessor] = [],
                   priority: FetchPriority = .default) async throws -> SmartImage {
         let request = ImageRequest(url: url,
                                    cachePolicy: cachePolicy,
                                    timeoutInterval: timeoutInterval,
+                                   headers: headers,
                                    processors: processors,
                                    priority: priority)
         return try await download(of: request)
@@ -119,12 +121,14 @@ public extension ImageFetching {
     func download(url: URL,
                   cachePolicy: URLRequest.CachePolicy? = nil,
                   timeoutInterval: TimeInterval? = nil,
+                  headers: [String: String]? = nil,
                   processors: [ImageProcessor] = [],
                   priority: FetchPriority = .default,
                   completion: ImageClosure? = nil) -> AnyCancellable {
         let request = ImageRequest(url: url,
                                    cachePolicy: cachePolicy,
                                    timeoutInterval: timeoutInterval,
+                                   headers: headers,
                                    processors: processors,
                                    priority: priority)
         return download(of: request,
@@ -140,12 +144,14 @@ public extension ImageFetching {
     func prefetch(url: URL,
                   cachePolicy: URLRequest.CachePolicy? = nil,
                   timeoutInterval: TimeInterval? = nil,
+                  headers: [String: String]? = nil,
                   processors: [ImageProcessor] = [],
                   priority: FetchPriority = .prefetch,
                   completion: @escaping ImageClosure = { _ in }) {
         let request = ImageRequest(url: url,
                                    cachePolicy: cachePolicy,
                                    timeoutInterval: timeoutInterval,
+                                   headers: headers,
                                    processors: processors,
                                    priority: priority)
         prefetch(of: request, completion: completion)
@@ -155,12 +161,14 @@ public extension ImageFetching {
     func prefetching(url: URL,
                      cachePolicy: URLRequest.CachePolicy? = nil,
                      timeoutInterval: TimeInterval? = nil,
+                     headers: [String: String]? = nil,
                      processors: [ImageProcessor] = [],
                      priority: FetchPriority = .prefetch,
                      completion: @escaping ImageClosure = { _ in }) -> AnyCancellable {
         let request = ImageRequest(url: url,
                                    cachePolicy: cachePolicy,
                                    timeoutInterval: timeoutInterval,
+                                   headers: headers,
                                    processors: processors,
                                    priority: priority)
         return prefetching(of: request, completion: completion)

@@ -20,6 +20,7 @@ public struct ImageRequest {
     public let url: URL
     public let cachePolicy: URLRequest.CachePolicy?
     public let timeoutInterval: TimeInterval?
+    public let headers: [String: String]?
     public let processors: [ImageProcessor]
     public let priority: FetchPriority
 
@@ -29,16 +30,19 @@ public struct ImageRequest {
     ///   - url: The URL of the image to download.
     ///   - cachePolicy: The cache policy for the network request. If `nil`, uses the default cache policy.
     ///   - timeoutInterval: Maximum time in seconds for the download to complete. If `nil`, uses default timeout.
+    ///   - headers: Optional HTTP headers to attach to the request (e.g. `Authorization`).
     ///   - processors: Array of image processors to apply to the downloaded image. Processors are applied in order.
     ///   - priority: Download priority that affects the order in which images are downloaded.
     public init(url: URL,
                 cachePolicy: URLRequest.CachePolicy? = nil,
                 timeoutInterval: TimeInterval? = nil,
+                headers: [String: String]? = nil,
                 processors: [ImageProcessor] = [],
                 priority: FetchPriority = .default) {
         self.url = url
         self.cachePolicy = cachePolicy
         self.timeoutInterval = timeoutInterval
+        self.headers = headers
         self.processors = processors
         self.priority = priority
     }

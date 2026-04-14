@@ -1,3 +1,4 @@
+#if canImport(SwiftUI)
 import Foundation
 
 public enum SmartImageContentScale: Sendable {
@@ -12,3 +13,5 @@ public enum SmartImageContentScale: Sendable {
     /// Like `scaledToFit`, but never upscales beyond the image's natural size.
     case scaleDown
 }
+
+#endif

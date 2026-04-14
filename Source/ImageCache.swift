@@ -50,13 +50,31 @@ public protocol ImageCaching {
 #endif
 
 public final class ImageCache: @unchecked Sendable {
+    private static let createdAtKey = "SmartImages.createdAt"
+
     @AtomicValue
     public private(set) var urlCache: URLCache
+
+    private let ttl: TimeInterval?
 
     public init(configuration: ImageCacheConfiguration) {
         self.urlCache = URLCache(memoryCapacity: configuration.memoryCapacity,
                                  diskCapacity: configuration.diskCapacity,
                                  directory: configuration.directory)
+        self.ttl = configuration.ttl
+    }
+
+    private func isExpired(_ response: CachedURLResponse) -> Bool {
+        guard let ttl else {
+            return false
+        }
+
+        guard let createdAt = response.userInfo?[Self.createdAtKey] as? TimeInterval else {
+            // Entries written before TTL was configured: treat as fresh and let LRU evict.
+            return false
+        }
+
+        return Date().timeIntervalSince1970 - createdAt > ttl
     }
 }
 
@@ -65,18 +83,29 @@ public final class ImageCache: @unchecked Sendable {
 extension ImageCache: ImageCaching {
     public func cached(for key: URL) -> Data? {
         return $urlCache.sync { urlCache in
-            return urlCache.cachedResponse(for: key.request)?.data
+            guard let response = urlCache.cachedResponse(for: key.request) else {
+                return nil
+            }
+
+            if isExpired(response) {
+                urlCache.removeCachedResponse(for: key.request)
+                return nil
+            }
+            return response.data
         }
     }
 
     public func store(_ data: Data, for key: URL) {
         return $urlCache.sync { urlCache in
+            let userInfo: [AnyHashable: Any]? = ttl.map { _ in
+                [Self.createdAtKey: Date().timeIntervalSince1970]
+            }
             let response = CachedURLResponse(response: .init(url: key,
                                                              mimeType: nil,
                                                              expectedContentLength: 0,
                                                              textEncodingName: nil),
                                              data: data,
-                                             userInfo: nil,
+                                             userInfo: userInfo,
                                              storagePolicy: .allowed)
             urlCache.storeCachedResponse(response, for: key.request)
         }

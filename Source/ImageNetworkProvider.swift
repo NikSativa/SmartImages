@@ -21,6 +21,23 @@ public protocol ImageNetworkProvider: Sendable {
                  timeoutInterval: TimeInterval?,
                  completion: @escaping ResultCompletion) -> ImageNetworkTask
 }
+
+public extension ImageNetworkProvider {
+    /// Initiates a network request to download an image, with optional HTTP headers.
+    ///
+    /// Default implementation forwards to `request(with:cachePolicy:timeoutInterval:completion:)`,
+    /// dropping headers. Override to honour `headers`.
+    func request(with url: URL,
+                 cachePolicy: URLRequest.CachePolicy?,
+                 timeoutInterval: TimeInterval?,
+                 headers: [String: String]?,
+                 completion: @escaping ResultCompletion) -> ImageNetworkTask {
+        return request(with: url,
+                       cachePolicy: cachePolicy,
+                       timeoutInterval: timeoutInterval,
+                       completion: completion)
+    }
+}
 #else
 /// A protocol defining the network layer for downloading images asynchronously.
 ///
@@ -41,5 +58,22 @@ public protocol ImageNetworkProvider {
                  cachePolicy: URLRequest.CachePolicy?,
                  timeoutInterval: TimeInterval?,
                  completion: @escaping ResultCompletion) -> ImageNetworkTask
+}
+
+public extension ImageNetworkProvider {
+    /// Initiates a network request to download an image, with optional HTTP headers.
+    ///
+    /// Default implementation forwards to `request(with:cachePolicy:timeoutInterval:completion:)`,
+    /// dropping headers. Override to honour `headers`.
+    func request(with url: URL,
+                 cachePolicy: URLRequest.CachePolicy?,
+                 timeoutInterval: TimeInterval?,
+                 headers: [String: String]?,
+                 completion: @escaping ResultCompletion) -> ImageNetworkTask {
+        return request(with: url,
+                       cachePolicy: cachePolicy,
+                       timeoutInterval: timeoutInterval,
+                       completion: completion)
+    }
 }
 #endif

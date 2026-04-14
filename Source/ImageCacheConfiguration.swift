@@ -26,6 +26,9 @@ public struct ImageCacheConfiguration: Equatable {
     public let directory: URL
     public let memoryCapacity: Int
     public let diskCapacity: Int
+    /// Maximum age of a cached entry, in seconds. `nil` disables TTL eviction.
+    /// Size-based LRU eviction is always performed by `URLCache` itself.
+    public let ttl: TimeInterval?
 
     /// Creates a cache configuration with a specific directory and capacity settings.
     ///
@@ -33,12 +36,15 @@ public struct ImageCacheConfiguration: Equatable {
     ///   - directory: The directory URL where cached images will be stored.
     ///   - memoryCapacity: Memory cache size in bytes. Defaults to 40MB, minimum 10MB.
     ///   - diskCapacity: Disk cache size in bytes. Defaults to 400MB, minimum 10MB.
+    ///   - ttl: Maximum age of a cached entry in seconds. `nil` (default) means no TTL eviction.
     public init(directory: URL,
                 memoryCapacity: Int? = nil,
-                diskCapacity: Int? = nil) {
+                diskCapacity: Int? = nil,
+                ttl: TimeInterval? = nil) {
         self.directory = directory
         self.memoryCapacity = memoryCapacity.recoverMemoryCapacity
         self.diskCapacity = diskCapacity.recoverDiskCapacity
+        self.ttl = ttl
     }
 
     /// Creates a cache configuration using a folder name in the system cache directory.
@@ -49,11 +55,13 @@ public struct ImageCacheConfiguration: Equatable {
     ///   - searchPathDomainMask: The search path domain mask. Defaults to `.userDomainMask`.
     ///   - memoryCapacity: Memory cache size in bytes. Defaults to 40MB, minimum 10MB.
     ///   - diskCapacity: Disk cache size in bytes. Defaults to 400MB, minimum 10MB.
+    ///   - ttl: Maximum age of a cached entry in seconds. `nil` (default) means no TTL eviction.
     public init?(folderName named: String = "DownloadedImages",
                  searchPathDirectory: FileManager.SearchPathDirectory = .cachesDirectory,
                  searchPathDomainMask: FileManager.SearchPathDomainMask = .userDomainMask,
                  memoryCapacity: Int? = nil,
-                 diskCapacity: Int? = nil) {
+                 diskCapacity: Int? = nil,
+                 ttl: TimeInterval? = nil) {
         let fileManager = FileManager.default
         let urls = fileManager.urls(for: searchPathDirectory,
                                     in: searchPathDomainMask)
@@ -65,6 +73,7 @@ public struct ImageCacheConfiguration: Equatable {
         self.directory = directory
         self.memoryCapacity = memoryCapacity.recoverMemoryCapacity
         self.diskCapacity = diskCapacity.recoverDiskCapacity
+        self.ttl = ttl
     }
 }
 
