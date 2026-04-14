@@ -30,7 +30,6 @@ public extension SmartImageView {
             closure(self)
         case .none:
             break
-
         #if os(iOS) || os(tvOS) || os(watchOS) || supportsVisionOS
         case let .imageNamed(name, bundle):
             image = SmartImage(named: name, in: bundle, with: nil)

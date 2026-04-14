@@ -30,9 +30,11 @@ public struct SmartImageView<P: View, L: View>: View {
     @SwiftUI.State
     private var reference = ImageDownloadReference()
     @SwiftUI.State
-    private var phase: SmartImagePhase
+    private var phase: SmartImagePhase = .idle
     @SwiftUI.State
     private var loadedRequests: [ImageRequest] = []
+    @SwiftUI.State
+    private var nativeSize: CGSize?
 
     public init(requests: [ImageRequest],
                 imageFetcher: ImageFetching,
@@ -44,9 +46,8 @@ public struct SmartImageView<P: View, L: View>: View {
         self.showLoader = showLoader
         self.loader = loader
         self.placeholder = placeholder
-        self.phase = .idle
         self.imageFetcher = imageFetcher
-        self.style = style ?? DefaultSmartImageStyle<P, L>()
+        self.style = style ?? SmartImageContentScaleStyle<P, L>(contentScale: .scaledToFit)
     }
 
     public var body: some View {
@@ -60,7 +61,8 @@ public struct SmartImageView<P: View, L: View>: View {
         .init(phase: phase,
               placeholder: placeholder,
               loader: loader,
-              showLoader: showLoader)
+              showLoader: showLoader,
+              nativeSize: nativeSize)
     }
 
     private func startLoadingIfNeeded() {
@@ -92,6 +94,7 @@ public struct SmartImageView<P: View, L: View>: View {
             switch result {
             case let .success(image):
                 loadedRequests = requests
+                nativeSize = image.size
                 #if os(iOS) || os(tvOS) || os(watchOS) || supportsVisionOS
                 phase = .loaded(.init(uiImage: image))
                 #elseif os(macOS)
@@ -211,13 +214,133 @@ public extension SmartImageView {
                   style: style,
                   loader: loader)
     }
+
+    // MARK: - SmartImageContentScale
+
+    init(requests: [ImageRequest],
+         imageFetcher: ImageFetching,
+         showLoader: Bool = true,
+         contentScale: SmartImageContentScale,
+         @ViewBuilder loader: @escaping () -> L,
+         @ViewBuilder placeholder: @escaping () -> P) {
+        self.init(requests: requests,
+                  imageFetcher: imageFetcher,
+                  showLoader: showLoader,
+                  style: SmartImageContentScaleStyle<P, L>(contentScale: contentScale),
+                  loader: loader,
+                  placeholder: placeholder)
+    }
+
+    init(request: ImageRequest?,
+         imageFetcher: ImageFetching,
+         showLoader: Bool = true,
+         contentScale: SmartImageContentScale,
+         @ViewBuilder loader: @escaping () -> L,
+         @ViewBuilder placeholder: @escaping () -> P) {
+        self.init(requests: request.map { [$0] } ?? [],
+                  imageFetcher: imageFetcher,
+                  showLoader: showLoader,
+                  contentScale: contentScale,
+                  loader: loader,
+                  placeholder: placeholder)
+    }
+
+    @available(iOS 17.0, macOS 14.0, tvOS 17.0, watchOS 10.0, *)
+    init(requests: [ImageRequest],
+         imageFetcher: ImageFetching,
+         placeholder: ImageResource,
+         showLoader: Bool = true,
+         contentScale: SmartImageContentScale,
+         @ViewBuilder loader: @escaping () -> L) where P == SmartImagePlaceholder {
+        self.init(requests: requests,
+                  imageFetcher: imageFetcher,
+                  showLoader: showLoader,
+                  style: SmartImageContentScaleStyle<SmartImagePlaceholder, L>(contentScale: contentScale),
+                  loader: loader,
+                  placeholder: {
+                      SmartImagePlaceholder(placeholder)
+                  })
+    }
+
+    @available(iOS 17.0, macOS 14.0, tvOS 17.0, watchOS 10.0, *)
+    init(request: ImageRequest?,
+         imageFetcher: ImageFetching,
+         placeholder: ImageResource,
+         showLoader: Bool = true,
+         contentScale: SmartImageContentScale,
+         @ViewBuilder loader: @escaping () -> L) where P == SmartImagePlaceholder {
+        self.init(requests: request.map { [$0] } ?? [],
+                  imageFetcher: imageFetcher,
+                  placeholder: placeholder,
+                  showLoader: showLoader,
+                  contentScale: contentScale,
+                  loader: loader)
+    }
+
+    init(urls: [URL],
+         imageFetcher: ImageFetching,
+         showLoader: Bool = true,
+         contentScale: SmartImageContentScale,
+         @ViewBuilder loader: @escaping () -> L,
+         @ViewBuilder placeholder: @escaping () -> P) {
+        self.init(requests: urls.map { .init(url: $0) },
+                  imageFetcher: imageFetcher,
+                  showLoader: showLoader,
+                  contentScale: contentScale,
+                  loader: loader,
+                  placeholder: placeholder)
+    }
+
+    init(url: URL?,
+         imageFetcher: ImageFetching,
+         showLoader: Bool = true,
+         contentScale: SmartImageContentScale,
+         @ViewBuilder loader: @escaping () -> L,
+         @ViewBuilder placeholder: @escaping () -> P) {
+        self.init(urls: url.map { [$0] } ?? [],
+                  imageFetcher: imageFetcher,
+                  showLoader: showLoader,
+                  contentScale: contentScale,
+                  loader: loader,
+                  placeholder: placeholder)
+    }
+
+    @available(iOS 17.0, macOS 14.0, tvOS 17.0, watchOS 10.0, *)
+    init(urls: [URL],
+         imageFetcher: ImageFetching,
+         placeholder: ImageResource,
+         showLoader: Bool = true,
+         contentScale: SmartImageContentScale,
+         @ViewBuilder loader: @escaping () -> L) where P == SmartImagePlaceholder {
+        self.init(requests: urls.map { .init(url: $0) },
+                  imageFetcher: imageFetcher,
+                  placeholder: placeholder,
+                  showLoader: showLoader,
+                  contentScale: contentScale,
+                  loader: loader)
+    }
+
+    @available(iOS 17.0, macOS 14.0, tvOS 17.0, watchOS 10.0, *)
+    init(url: URL?,
+         imageFetcher: ImageFetching,
+         placeholder: ImageResource,
+         showLoader: Bool = true,
+         contentScale: SmartImageContentScale,
+         @ViewBuilder loader: @escaping () -> L) where P == SmartImagePlaceholder {
+        self.init(urls: url.map { [$0] } ?? [],
+                  imageFetcher: imageFetcher,
+                  placeholder: placeholder,
+                  showLoader: showLoader,
+                  contentScale: contentScale,
+                  loader: loader)
+    }
 }
 
 @available(iOS 17.0, macOS 14.0, tvOS 17.0, watchOS 10.0, *)
 public struct SmartImagePlaceholder: View {
     private let resource: ImageResource
 
-    init(_ resource: ImageResource) {
+    public init(_ resource: ImageResource) {
         self.resource = resource
     }
 
