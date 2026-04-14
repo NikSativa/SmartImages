@@ -11,7 +11,7 @@
 ```
 SmartImages          — Core: fetching, caching, decoding, processing
 SmartImagesUIKit     — UIKit: placeholder, animation, ImageView extensions
-SmartImagesSwiftUI   — SwiftUI: AsyncImageView
+SmartImagesSwiftUI   — SwiftUI: SmartImageView (phase-builder + content-scale)
 ```
 
 | You need | Import |
@@ -28,7 +28,7 @@ UIKit and SwiftUI targets depend on `SmartImages` — it is pulled in automatica
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/NikSativa/SmartImages.git", from: "1.0.0")
+    .package(url: "https://github.com/NikSativa/SmartImages.git", from: "4.0.0")
 ]
 ```
 
@@ -66,14 +66,56 @@ fetcher.download(url: imageURL,
 
 ### SwiftUI
 
+`SmartImageView` is a single generic view with two API modes.
+
+#### Convenience: placeholder + loader + content scale
+
 ```swift
 import SmartImagesSwiftUI
 
-AsyncImageView(url: imageURL, imageDownloader: fetcher) {
+SmartImageView(url: imageURL,
+               imageFetcher: fetcher,
+               contentScale: .scaledToFill) {
     ProgressView()
 } placeholder: {
-    Image(systemName: "photo")
+    Color.gray
 }
+```
+
+#### Phase-builder (full control, à la `AsyncImage`)
+
+```swift
+SmartImageView(url: imageURL, imageFetcher: fetcher) { phase in
+    switch phase {
+    case .idle, .loading:
+        ProgressView()
+    case .loaded(let image, _):
+        image.resizable().scaledToFit()
+    case .failed, .noURL:
+        Image(systemName: "photo")
+    }
+}
+```
+
+#### Inject a default fetcher via environment
+
+Skip `imageFetcher:` on every call site by injecting once at the root:
+
+```swift
+@main
+struct MyApp: App {
+    let fetcher = ImageFetcher(network: YourNetworkImpl())
+
+    var body: some Scene {
+        WindowGroup {
+            ContentView()
+                .smartImageFetcher(fetcher)
+        }
+    }
+}
+
+// anywhere downstream:
+SmartImageView(url: url) { phase in /* … */ }
 ```
 
 ### Core (closure-based)
@@ -81,7 +123,7 @@ AsyncImageView(url: imageURL, imageDownloader: fetcher) {
 ```swift
 import SmartImages
 
-let token = fetcher.download(of: ImageLoadConfiguration(url: imageURL)) { result in
+let token = fetcher.download(of: ImageRequest(url: imageURL)) { result in
     switch result {
     case .success(let image): break // use image
     case .failure(let error): break // handle error
@@ -99,7 +141,7 @@ let image = try await fetcher.download(url: imageURL, priority: .high)
 ### Prefetching
 
 ```swift
-fetcher.prefetch(of: ImageLoadConfiguration(url: upcomingURL, priority: .prefetch)) { _ in }
+fetcher.prefetch(of: ImageRequest(url: upcomingURL, priority: .prefetch)) { _ in }
 ```
 
 ## Core Types
@@ -118,32 +160,39 @@ let fetcher = ImageFetcher(
 )
 ```
 
-### `ImageLoadConfiguration`
+### `ImageRequest`
 
 Configuration for a single download.
 
 ```swift
-let config = ImageLoadConfiguration(
+let request = ImageRequest(
     url: imageURL,
     cachePolicy: .returnCacheDataElseLoad,
-    processors: [ResizeProcessor(targetSize: CGSize(width: 200, height: 200))],
+    timeoutInterval: 30,
+    headers: ["Authorization": "Bearer \(token)"],
+    processors: [
+        ImageProcessors.Resize(size: CGSize(width: 200, height: 200),
+                               contentMode: .aspectFill),
+        ImageProcessors.Crop(rect: CGRect(x: 0, y: 0, width: 200, height: 200))
+    ],
     priority: .high
 )
 ```
 
 ### `ImageCacheConfiguration`
 
-Cache configuration.
+Cache configuration. `URLCache` handles size-based LRU eviction; the optional `ttl` adds age-based eviction on read.
 
 ```swift
 // defaults: 40 MB memory, 400 MB disk
 let cache = ImageCacheConfiguration(folderName: "MyAppImages")
 
-// custom limits
+// custom limits + TTL
 let cache = ImageCacheConfiguration(
     folderName: "LargeCache",
     memoryCapacity: 100 * 1024 * 1024,
-    diskCapacity: 1000 * 1024 * 1024
+    diskCapacity: 1000 * 1024 * 1024,
+    ttl: 60 * 60 * 24 * 7   // 7 days
 )
 ```
 
@@ -152,16 +201,25 @@ let cache = ImageCacheConfiguration(
 Protocol for image transformations applied during download.
 
 ```swift
-struct ResizeProcessor: ImageProcessor {
-    let targetSize: CGSize
+struct RoundCornersProcessor: ImageProcessor {
+    let radius: CGFloat
     func process(_ image: SmartImage) -> SmartImage {
-        // resize logic
+        // transform logic
     }
 }
+```
+
+#### Built-in processors
+
+```swift
+ImageProcessors.Resize(size: CGSize(width: 200, height: 200),
+                       contentMode: .aspectFit)   // .stretch / .aspectFit / .aspectFill
+
+ImageProcessors.Crop(rect: CGRect(x: 0, y: 0, width: 200, height: 200))
 
 // chain multiple processors
-let composition = ImageProcessors.Composition(processors: [
-    ResizeProcessor(targetSize: ...),
+ImageProcessors.Composition(processors: [
+    ImageProcessors.Resize(size: ...),
     RoundCornersProcessor(radius: 10)
 ])
 ```
@@ -195,6 +253,79 @@ Download priority levels.
 .custom { imageView, image in ... }   // all platforms
 ```
 
+## SwiftUI
+
+### `SmartImageView<Content>`
+
+A single generic view backed by a `(SmartImagePhase) -> Content` builder. Convenience initializers cover the common cases by constructing a `SmartImageContent` renderer for you.
+
+Phase enum:
+
+```swift
+public enum SmartImagePhase {
+    case idle
+    case loading
+    case loaded(SwiftUI.Image, nativeSize: CGSize)
+    case failed
+    case noURL
+}
+```
+
+### `SmartImageContentScale`
+
+Used by the convenience initializers. Equivalent to `UIView.ContentMode` for the loaded image.
+
+| Case | Behaviour |
+|------|-----------|
+| `.scaledToFit` | Aspect-fit inside the container (default) |
+| `.scaledToFill` | Aspect-fill, may crop |
+| `.stretch` | Resizable, ignores aspect |
+| `.original` | Natural size, no `.resizable()` |
+| `.scaleDown` | `.scaledToFit` clamped to the image's native size — never upscales |
+
+### Environment modifiers
+
+| Modifier | Purpose |
+|----------|---------|
+| `.smartImageFetcher(_:)` | Default `ImageFetching` for descendant `SmartImageView`s |
+| `.smartImageAnimation(_:)` | `Animation` applied when phase transitions to `.loaded` |
+| `.smartImageTransition(_:)` | `AnyTransition` applied to the loaded branch |
+| `.smartImageTransition(_:animation:)` | Convenience: both at once |
+
+```swift
+ContentView()
+    .smartImageFetcher(fetcher)
+    .smartImageTransition(.opacity, animation: .easeInOut(duration: 0.24))
+```
+
+### Previews and tests: `PreviewImageFetcher`
+
+A drop-in `ImageFetching` implementation that returns a deterministic result without performing real I/O.
+
+```swift
+#Preview {
+    SmartImageView(url: previewURL,
+                   imageFetcher: PreviewImageFetcher(image: .init(named: "sample")!),
+                   contentScale: .scaledToFit) {
+        ProgressView()
+    } placeholder: {
+        Color.gray
+    }
+}
+
+// per-URL responses
+let fetcher = PreviewImageFetcher(images: [
+    url1: image1,
+    url2: image2
+])
+
+// always fail
+let fetcher = PreviewImageFetcher(error: URLError(.notConnectedToInternet))
+
+// simulate latency
+let fetcher = PreviewImageFetcher(image: image, delay: 1.5)
+```
+
 ### Custom Networking
 
 Implement `ImageNetworkProvider` and `ImageNetworkTask`:
@@ -207,8 +338,19 @@ struct MyNetwork: ImageNetworkProvider {
                  completion: @escaping ResultCompletion) -> ImageNetworkTask {
         // your networking logic
     }
+
+    // Optional: opt in to ImageRequest.headers by overriding the default
+    func request(with url: URL,
+                 cachePolicy: URLRequest.CachePolicy?,
+                 timeoutInterval: TimeInterval?,
+                 headers: [String: String]?,
+                 completion: @escaping ResultCompletion) -> ImageNetworkTask {
+        // build a URLRequest, attach `headers`, dispatch it
+    }
 }
 ```
+
+If you don't override the `headers:` method, the default implementation forwards to the legacy 3-arg method and silently drops headers — useful for keeping older provider implementations source-compatible.
 
 #### Integration with [SmartNetwork](https://github.com/NikSativa/SmartNetwork)
 
@@ -233,7 +375,7 @@ struct ImageDownloaderNetworkAdaptor: ImageNetworkProvider {
     }
 }
 
-private struct ImageDownloaderTaskAdaptor: ImageDownloaderTask, @unchecked Sendable {
+private struct ImageDownloaderTaskAdaptor: ImageNetworkTask, @unchecked Sendable {
     let task: SmartTasking
 
     func start() {
@@ -246,24 +388,23 @@ private struct ImageDownloaderTaskAdaptor: ImageDownloaderTask, @unchecked Senda
 }
 ```
 
-## Migration from pre-2.0
+## Migration to 4.0
 
-All types have been renamed for clarity. Old names are available as deprecated typealiases:
+### SwiftUI
 
-| Old Name | New Name |
-|----------|----------|
-| `Image` | `SmartImage` |
-| `ImageView` | `SmartImageView` |
-| `ImageDownloader` | `ImageFetcher` |
-| `ImageDownloading` | `ImageFetching` |
-| `ImageInfo` | `ImageLoadConfiguration` |
-| `ImageCacheInfo` | `ImageCacheConfiguration` |
-| `ImagePriority` | `FetchPriority` |
-| `ImageDownloaderNetwork` | `ImageNetworkProvider` |
-| `ImageDownloaderTask` | `ImageNetworkTask` |
-| `ImageDownloadQueueing` | `ImageQueueScheduling` |
-| `ImageDownloadQueuePriority` | `FetchQueueingPriority` |
-| `ImageDownloaderError` | `ImageFetchingError` |
+| Pre-4.0 | 4.0 |
+|---------|-----|
+| `AsyncImageView(url:imageDownloader:...)` | `SmartImageView(url:imageFetcher:...)` |
+| `SmartImagePhaseView` | merged into `SmartImageView` |
+| `SmartImageStyle` / `SmartImageStyleConfiguration` | removed; use `SmartImageContent<P, L>` or supply your own phase-builder |
+| `SmartImagePlaceholder` | renamed to `SmartImageResourceView` |
+| `case .loaded(SwiftUI.Image)` | `case .loaded(SwiftUI.Image, nativeSize: CGSize)` |
+
+### Core
+
+| Pre-4.0 | 4.0 |
+|---------|-----|
+| `ImageLoadConfiguration` | `ImageRequest` (now also carries `headers`) |
 
 ## Supported Platforms
 
