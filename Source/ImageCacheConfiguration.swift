@@ -95,6 +95,4 @@ private extension Int? {
     }
 }
 
-#if swift(>=6.0)
 extension ImageCacheConfiguration: Sendable {}
-#endif

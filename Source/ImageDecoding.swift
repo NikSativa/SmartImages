@@ -1,6 +1,5 @@
 import Foundation
 
-#if swift(>=6.0)
 /// Protocol for decoding image data into platform-specific image objects.
 ///
 /// `ImageDecoding` provides a way to convert raw image data into displayable images.
@@ -24,31 +23,6 @@ import Foundation
 public protocol ImageDecoding: Sendable {
     func decode(_ data: Data) -> SmartImage?
 }
-#else
-/// Protocol for decoding image data into platform-specific image objects.
-///
-/// `ImageDecoding` provides a way to convert raw image data into displayable images.
-/// You can implement custom decoders for specific image formats or use the built-in
-/// `ImageDecoders.Default` implementation which handles common formats.
-///
-/// ## Usage Example
-/// ```swift
-/// struct CustomDecoder: ImageDecoding {
-///     func decode(_ data: Data) -> SmartImage? {
-///         // Custom decoding logic for specific format
-///         return decodedImage
-///     }
-/// }
-///
-/// let downloader = ImageFetcher(
-///     network: network,
-///     decoders: [CustomDecoder(), ImageDecoders.Default()]
-/// )
-/// ```
-public protocol ImageDecoding {
-    func decode(_ data: Data) -> SmartImage?
-}
-#endif
 
 /// Namespace for built-in and custom image decoders.
 ///

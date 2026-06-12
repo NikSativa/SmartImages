@@ -142,7 +142,5 @@ private extension CGImage {
     }
 }
 
-#if swift(>=6.0)
 extension ImageProcessors.Resize: Sendable {}
 extension ImageProcessors.Crop: Sendable {}
-#endif

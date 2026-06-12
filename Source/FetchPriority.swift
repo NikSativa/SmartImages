@@ -36,6 +36,4 @@ public enum FetchPriority: Comparable {
     public static let prefetch: Self = .veryLow
 }
 
-#if swift(>=6.0)
 extension FetchPriority: Sendable {}
-#endif

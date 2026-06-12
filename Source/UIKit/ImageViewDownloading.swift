@@ -9,7 +9,6 @@ import Cocoa
 #error("unsupported os")
 #endif
 
-#if swift(>=6.0)
 /// A protocol extending `ImageFetching` with UIKit-specific behavior for image views.
 ///
 /// When the reference is a `UIImageView` (or `NSImageView` on macOS), this protocol
@@ -23,21 +22,6 @@ public protocol ImageViewDownloading: ImageFetching {
                   placeholder: ImagePlaceholder,
                   completion: @escaping ImageClosure)
 }
-#else
-/// A protocol extending `ImageFetching` with UIKit-specific behavior for image views.
-///
-/// When the reference is a `UIImageView` (or `NSImageView` on macOS), this protocol
-/// automatically sets placeholders before downloading and animates image transitions
-/// after the download completes.
-public protocol ImageViewDownloading: ImageFetching {
-    /// Downloads an image with the specified info, sets placeholder and animates the result into the image view.
-    func download(of request: ImageRequest,
-                  for reference: ImageReference,
-                  animated animation: ImageAnimation?,
-                  placeholder: ImagePlaceholder,
-                  completion: @escaping ImageClosure)
-}
-#endif
 
 // MARK: - Convenience
 

@@ -1,21 +1,12 @@
 import Foundation
 import Threading
 
-#if swift(>=6.0)
 public typealias VoidClosure = @Sendable () -> Void
 /// A closure type for handling image download completion.
 ///
 /// `ImageClosure` is called when an image download completes, providing either
 /// the loaded image or `nil` if the download failed.
 public typealias ImageClosure = @Sendable @MainActor (Result<SmartImage, Error>) -> Void
-#else
-public typealias VoidClosure = () -> Void
-/// A closure type for handling image download completion.
-///
-/// `ImageClosure` is called when an image download completes, providing either
-/// the loaded image or `nil` if the download failed.
-public typealias ImageClosure = (Result<SmartImage, Error>) -> Void
-#endif
 
 #if os(iOS) || os(tvOS) || supportsVisionOS
 import UIKit
@@ -43,9 +34,7 @@ public protocol SmartImageView: AnyObject, Sendable {
 
 #if os(iOS) || os(tvOS)
 private enum DisplayInfo {
-    #if swift(>=6.0)
     @MainActor
-    #endif
     static var scale: CGFloat {
         return UIScreen.main.scale
     }
@@ -55,9 +44,7 @@ private enum DisplayInfo {
 import WatchKit
 
 private enum DisplayInfo {
-    #if swift(>=6.0)
     @MainActor
-    #endif
     static var scale: CGFloat {
         return WKInterfaceDevice.current().screenScale
     }
@@ -73,9 +60,7 @@ public enum DisplayInfo {
     //
     // visionOS doesn't have a traditional screen scale, so this defaults to `nil`.
     // You can override this value for testing purposes, but use with caution.
-    #if swift(>=6.0)
     @MainActor
-    #endif
     public static var scale: CGFloat?
 }
 #endif

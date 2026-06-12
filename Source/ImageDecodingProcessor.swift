@@ -25,6 +25,4 @@ public struct ImageDecodingProcessor {
     }
 }
 
-#if swift(>=6.0)
 extension ImageDecodingProcessor: Sendable {}
-#endif

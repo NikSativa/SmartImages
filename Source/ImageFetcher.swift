@@ -401,10 +401,8 @@ private final class WeakViews {
 
 // MARK: - Sendable
 
-#if swift(>=6.0)
 extension ImageFetcher: @unchecked Sendable {}
 
 extension WeakViews: @unchecked Sendable {}
 extension WeakViews.Stub: @unchecked Sendable {}
 extension WeakViews.InstanceStub: @unchecked Sendable {}
-#endif

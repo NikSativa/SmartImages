@@ -13,11 +13,7 @@ private struct SmartImageAnimationKey: EnvironmentKey {
 }
 
 private struct SmartImageTransitionKey: EnvironmentKey {
-    #if swift(>=6.0)
     nonisolated(unsafe) static let defaultValue: AnyTransition? = nil
-    #else
-    static let defaultValue: AnyTransition? = nil
-    #endif
 }
 
 // MARK: - EnvironmentValues

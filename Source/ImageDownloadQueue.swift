@@ -10,7 +10,6 @@ public enum FetchQueueingPriority: Comparable {
     case hasImageView
 }
 
-#if swift(>=6.0)
 public protocol ImageQueueScheduling: Sendable {
     typealias Prioritizer = @Sendable () -> FetchQueueingPriority
     typealias Starter = @Sendable (_ completion: @escaping VoidClosure) -> Void
@@ -19,16 +18,6 @@ public protocol ImageQueueScheduling: Sendable {
              prioritizer: @escaping Prioritizer,
              starter: @escaping Starter)
 }
-#else
-public protocol ImageQueueScheduling {
-    typealias Prioritizer = () -> FetchQueueingPriority
-    typealias Starter = (_ completion: @escaping VoidClosure) -> Void
-
-    func add(hash: AnyHashable,
-             prioritizer: @escaping Prioritizer,
-             starter: @escaping Starter)
-}
-#endif
 
 /// A priority queue that manages concurrent image download operations.
 ///
@@ -150,8 +139,6 @@ private extension ImageDownloadQueue {
     }
 }
 
-#if swift(>=6.0)
 extension ImageDownloadQueue: @unchecked Sendable {}
 extension ImageDownloadQueue.Operation: @unchecked Sendable {}
 extension FetchQueueingPriority: Sendable {}
-#endif

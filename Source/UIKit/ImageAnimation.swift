@@ -33,6 +33,4 @@ public enum ImageAnimation {
     case custom((_ imageView: SmartImageView, _ image: SmartImage) -> Void)
 }
 
-#if swift(>=6.0)
 extension ImageAnimation: @unchecked Sendable {}
-#endif

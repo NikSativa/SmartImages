@@ -2,7 +2,6 @@ import Combine
 import Foundation
 import Threading
 
-#if swift(>=6.0)
 /// A protocol representing the behavior of downloading images asynchronously.
 public protocol ImageFetching: Sendable {
     /// any object when referencing the downloading task
@@ -31,36 +30,6 @@ public protocol ImageFetching: Sendable {
     /// Cancels the download for the specified reference.
     func cancel(for reference: ImageReference)
 }
-#else
-/// A protocol representing the behavior of downloading images asynchronously.
-public protocol ImageFetching {
-    /// any object when referencing the downloading task
-    /// at UIKit can be UIImageView
-    /// at SwiftUI can be ImageReference `@State var reference: ImageReference = .init()`
-    typealias ImageReference = AnyObject
-
-    /// The image cache used for downloaded images.
-    var imageCache: ImageCaching? { get }
-
-    /// Downloads an image with the specified info and registers the reference for prioritization.
-    /// The reference is stored as weak — if it is still alive, the download receives the highest priority.
-    func download(of request: ImageRequest,
-                  for reference: ImageReference,
-                  completion: @escaping ImageClosure)
-
-    /// Downloads an image with the specified info.
-    func download(of request: ImageRequest, completion: @escaping ImageClosure) -> AnyCancellable
-
-    /// Prefetches an image with the specified info.
-    func prefetch(of request: ImageRequest, completion: @escaping ImageClosure)
-
-    /// Prefetches an image with the specified info.
-    func prefetching(of request: ImageRequest, completion: @escaping ImageClosure) -> AnyCancellable
-
-    /// Cancels the download for the specified reference.
-    func cancel(for reference: ImageReference)
-}
-#endif
 
 // MARK: - Async/Await
 

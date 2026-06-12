@@ -32,13 +32,8 @@ import Cocoa
 /// }
 /// ```
 public enum ImagePlaceholder {
-    #if swift(>=6.0)
     public typealias CustomSetter = @MainActor (SmartImageView) -> Void
     public nonisolated(unsafe) static var `default`: Self = .none
-    #else
-    public typealias CustomSetter = (SmartImageView) -> Void
-    public static var `default`: Self = .none
-    #endif
 
     /// A placeholder that does nothing.
     case none
@@ -85,6 +80,4 @@ public enum ImagePlaceholder {
     }
 }
 
-#if swift(>=6.0)
 extension ImagePlaceholder: @unchecked Sendable {}
-#endif

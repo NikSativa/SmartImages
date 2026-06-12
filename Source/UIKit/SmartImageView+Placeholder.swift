@@ -17,9 +17,7 @@ public extension SmartImageView {
     // called before starting an image download to show loading state or fallback content.
     //
     // - Parameter placeholder: The placeholder to display in the image view.
-    #if swift(>=6.0)
     @MainActor
-    #endif
     func setPlaceholder(_ placeholder: ImagePlaceholder) {
         switch placeholder {
         case let .image(image):

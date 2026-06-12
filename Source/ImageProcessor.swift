@@ -1,7 +1,6 @@
 import Foundation
 import Threading
 
-#if swift(>=6.0)
 /// Protocol for processing images during download and decode operations.
 ///
 /// `ImageProcessor` allows you to transform images before they are displayed, such as resizing,
@@ -27,33 +26,6 @@ import Threading
 public protocol ImageProcessor: Sendable {
     func process(_ image: SmartImage) -> SmartImage
 }
-#else
-/// Protocol for processing images during download and decode operations.
-///
-/// `ImageProcessor` allows you to transform images before they are displayed, such as resizing,
-/// cropping, applying filters, or any other image manipulation. Processors are applied in the
-/// order they are provided in the `ImageRequest.processors` array.
-///
-/// ## Usage Example
-/// ```swift
-/// struct ResizeProcessor: ImageProcessor {
-///     let targetSize: CGSize
-///
-///     func process(_ image: SmartImage) -> SmartImage {
-///         // Resize image to target size
-///         return resizedImage
-///     }
-/// }
-///
-/// let info = ImageRequest(
-///     url: imageURL,
-///     processors: [ResizeProcessor(targetSize: CGSize(width: 200, height: 200))]
-/// )
-/// ```
-public protocol ImageProcessor {
-    func process(_ image: SmartImage) -> SmartImage
-}
-#endif
 
 /// Namespace for built-in and custom image processors.
 ///
@@ -104,6 +76,4 @@ extension ImageProcessors.Composition: ImageProcessor {
     }
 }
 
-#if swift(>=6.0)
 extension ImageProcessors.Composition: @unchecked Sendable {}
-#endif

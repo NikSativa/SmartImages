@@ -58,6 +58,4 @@ extension ImageRequest: Hashable {
     }
 }
 
-#if swift(>=6.0)
 extension ImageRequest: Sendable {}
-#endif

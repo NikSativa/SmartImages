@@ -64,9 +64,7 @@ private func needDownload(of request: ImageRequest, for holder: USendable<ImageF
 }
 
 private extension ImageAnimation? {
-    #if swift(>=6.0)
     @MainActor
-    #endif
     func animate(_ imageView: SmartImageView, image: SmartImage?) {
         // ignore nil, to leave placeholder
         guard let image else {
