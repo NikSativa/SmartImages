@@ -6,7 +6,8 @@ import Threading
 @Spryable
 final class FakeQueueable: Queueable {
     var shouldFireSyncClosures: Bool = false
-    var asyncWorkItem: (() -> Void)?
+    @AtomicValue
+    var asyncWorkItem: (() -> Void)? = nil
 
     func async(execute workItem: @escaping () -> Void) {
         asyncWorkItem = workItem

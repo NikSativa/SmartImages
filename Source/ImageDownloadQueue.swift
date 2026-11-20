@@ -45,19 +45,24 @@ public final class ImageDownloadQueue {
     }
 
     private func scheduleUpdate() {
-        if isScheduled {
-            return
-        }
-        mutex.sync {
+        let needsDispatch = mutex.sync {
+            if isScheduled {
+                return false
+            }
             isScheduled = true
+            return true
+        }
+
+        guard needsDispatch else {
+            return
         }
 
         operationThreading.async { [weak self] in
-            self?.checkQueue()
-
             self?.mutex.syncUnchecked {
                 self?.isScheduled = false
             }
+
+            self?.checkQueue()
         }
     }
 
